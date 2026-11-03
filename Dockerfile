@@ -28,7 +28,7 @@ CMD [ "/run.sh" ]
 
 LABEL \
     io.hass.name="FritzBox Network Guard" \
-    io.hass.description="Network scanner + FritzBox IP blacklist / isolation" \
+    io.hass.description="Network scanner + FritzBox IP blacklist / isolation + SecurityEngine" \
     io.hass.type="addon" \
-    io.hass.version="1.2.0" \
+    io.hass.version="1.3.1" \
     org.opencontainers.image.source="https://github.com/Qlimuli/ha-fritzbox-network-guard"
