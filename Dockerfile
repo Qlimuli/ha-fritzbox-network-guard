@@ -30,5 +30,5 @@ LABEL \
     io.hass.name="FritzBox Network Guard" \
     io.hass.description="Network scanner + FritzBox IP blacklist / isolation" \
     io.hass.type="addon" \
-    io.hass.version="1.1.0" \
+    io.hass.version="1.2.0" \
     org.opencontainers.image.source="https://github.com/Qlimuli/ha-fritzbox-network-guard"
