@@ -1,11 +1,10 @@
 name: "FritzBox Network Guard"
-version: "1.2.0"
+version: "1.3.0"
 slug: fritzbox_network_guard
 description: >-
-  Scans the local network for critical / suspicious devices.
-  On alert: WAN-Sperre + dynamischer MAC-Filter (Whitelist aller
-  bekannten Geräte außer den gesperrten). MAC-Filter wird
-  automatisch deaktiviert sobald kein Gerät mehr gesperrt ist.
+  LAN-Scan, MAC-Quarantäne, Perimeter-Portscan der öffentlichen IP,
+  Threat-Intelligence (FireHOL/Spamhaus), IDS-Webhooks (Suricata/Wazuh).
+  Bei Alarmen: WAN-Sperre auf der FritzBox + optional MAC-Filter.
   Entsperren über die Add-on-GUI.
 arch:
   - aarch64
