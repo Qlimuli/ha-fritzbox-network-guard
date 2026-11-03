@@ -4,7 +4,8 @@ FROM ${BUILD_FROM}
 ENV LANG=C.UTF-8 \
     PYTHONUNBUFFERED=1 \
     PIP_BREAK_SYSTEM_PACKAGES=1 \
-    PIP_NO_CACHE_DIR=1
+    PIP_NO_CACHE_DIR=1 \
+    APP_HOME=/opt/network-guard
 
 RUN apk add --no-cache \
     python3 \
@@ -18,22 +19,15 @@ RUN pip3 install --no-cache-dir \
     waitress \
     requests
 
-RUN mkdir -p /app
-
-# Copy application files explicitly (HA build sometimes skips nested dirs)
+# Copy entire rootfs: run.sh -> /run.sh, app/* -> /opt/network-guard/
 COPY rootfs/run.sh /run.sh
-COPY rootfs/main.py /app/main.py
-COPY rootfs/mac_guard.py /app/mac_guard.py
-COPY rootfs/security_engine.py /app/security_engine.py
-COPY rootfs/ui.html /app/ui.html
-# Keep nested path too if present in build context
-COPY rootfs/app/ /app/
+COPY rootfs/app/ ${APP_HOME}/
 
 RUN chmod a+x /run.sh \
-    && test -f /app/main.py \
-    && ls -la /app/
+    && test -f ${APP_HOME}/main.py \
+    && ls -la ${APP_HOME}/
 
-WORKDIR /app
+WORKDIR ${APP_HOME}
 
 CMD [ "/run.sh" ]
 
