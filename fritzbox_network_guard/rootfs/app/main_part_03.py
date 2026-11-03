@@ -17,7 +17,7 @@ def unblock_ip(ip: str) -> bool:
         log.info("Unblocked WAN for %s", ip)
         return True
     except Exception as exc:
-        log.error("Unblock %s failed: %s", ip, exp)
+        log.error("Unblock %s failed: %s", ip, exc)
         return False
 
 
