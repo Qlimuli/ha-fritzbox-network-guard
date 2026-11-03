@@ -1,5 +1,5 @@
-# Home Assistant App – FritzBox Network Guard
-FROM ghcr.io/home-assistant/base:3.21
+ARG BUILD_FROM=ghcr.io/home-assistant/base:3.21
+FROM ${BUILD_FROM}
 
 ENV LANG=C.UTF-8 \
     PYTHONUNBUFFERED=1 \
@@ -18,9 +18,13 @@ RUN pip3 install --no-cache-dir \
     waitress \
     requests
 
-COPY rootfs/ /
+# Explicit copy so /app/main.py is never missing in the image
+COPY rootfs/run.sh /run.sh
+COPY rootfs/app/ /app/
 
-RUN chmod a+x /run.sh
+RUN chmod a+x /run.sh \
+    && test -f /app/main.py \
+    && ls -la /app/
 
 WORKDIR /app
 
@@ -30,5 +34,5 @@ LABEL \
     io.hass.name="FritzBox Network Guard" \
     io.hass.description="Network scanner + FritzBox IP blacklist / isolation + SecurityEngine" \
     io.hass.type="addon" \
-    io.hass.version="1.3.1" \
+    io.hass.version="1.3.2" \
     org.opencontainers.image.source="https://github.com/Qlimuli/ha-fritzbox-network-guard"
