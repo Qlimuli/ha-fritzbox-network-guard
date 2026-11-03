@@ -2,79 +2,234 @@
 <html lang="de">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#0b1220">
 <title>FritzBox Network Guard</title>
 <style>
-:root{--bg:#0b1220;--panel:#111827;--card:#1a2332;--border:#243044;--text:#e5eefb;--muted:#8b9bb4;--accent:#38bdf8;--ok:#22c55e;--warn:#f59e0b;--danger:#ef4444;--crit:#a855f7}
-*{box-sizing:border-box;margin:0;padding:0}
-body{font-family:Inter,system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--text);line-height:1.45;min-height:100vh}
-header{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:1rem;padding:1.1rem 1.4rem;border-bottom:1px solid var(--border);background:linear-gradient(180deg,#121a2b,var(--bg))}
-header h1{font-size:1.25rem;font-weight:700;display:flex;align-items:center;gap:.5rem}
-.badge{font-size:.72rem;padding:.2rem .55rem;border-radius:999px;font-weight:600}
-.badge-ok{background:#14532d;color:#86efac}.badge-warn{background:#78350f;color:#fcd34d}
-.badge-danger{background:#7f1d1d;color:#fca5a5}.badge-muted{background:#1e293b;color:var(--muted)}
-.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:.75rem;padding:1rem 1.4rem}
-.stat{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:.9rem 1rem}
-.stat .label{font-size:.75rem;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
-.stat .value{font-size:1.45rem;font-weight:700;margin-top:.15rem}
-.stat .sub{font-size:.75rem;color:var(--muted);margin-top:.2rem}
-.tabs{display:flex;gap:.35rem;padding:0 1.4rem;border-bottom:1px solid var(--border);overflow-x:auto}
-.tab{padding:.7rem 1rem;cursor:pointer;color:var(--muted);border-bottom:2px solid transparent;font-weight:600;font-size:.9rem;white-space:nowrap}
+:root{
+  --bg:#0b1220;--panel:#111827;--card:#1a2332;--border:#243044;
+  --text:#e5eefb;--muted:#8b9bb4;--accent:#38bdf8;
+  --ok:#22c55e;--warn:#f59e0b;--danger:#ef4444;--crit:#a855f7;
+  --radius:12px;--touch:44px;
+  --safe-top:env(safe-area-inset-top,0px);
+  --safe-bottom:env(safe-area-inset-bottom,0px);
+  --safe-left:env(safe-area-inset-left,0px);
+  --safe-right:env(safe-area-inset-right,0px);
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html{height:100%;-webkit-text-size-adjust:100%}
+body{
+  font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,sans-serif;
+  background:var(--bg);color:var(--text);line-height:1.45;
+  min-height:100%;min-height:100dvh;
+  padding-bottom:calc(1rem + var(--safe-bottom));
+  padding-left:var(--safe-left);padding-right:var(--safe-right);
+}
+header{
+  display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;
+  gap:.75rem;padding:calc(.9rem + var(--safe-top)) 1rem .9rem;
+  border-bottom:1px solid var(--border);
+  background:linear-gradient(180deg,#121a2b,var(--bg));
+  position:sticky;top:0;z-index:20;
+}
+header h1{font-size:1.15rem;font-weight:700;display:flex;align-items:center;gap:.45rem}
+header .sub{color:var(--muted);font-size:.8rem;margin-top:.15rem}
+.badge{font-size:.7rem;padding:.25rem .55rem;border-radius:999px;font-weight:600;white-space:nowrap}
+.badge-ok{background:#14532d;color:#86efac}
+.badge-warn{background:#78350f;color:#fcd34d}
+.badge-danger{background:#7f1d1d;color:#fca5a5}
+.badge-muted{background:#1e293b;color:var(--muted)}
+
+.stats{
+  display:grid;grid-template-columns:repeat(2,1fr);gap:.6rem;
+  padding:.85rem 1rem;
+}
+.stat{
+  background:var(--card);border:1px solid var(--border);border-radius:var(--radius);
+  padding:.75rem .85rem;
+}
+.stat .label{font-size:.68rem;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+.stat .value{font-size:1.25rem;font-weight:700;margin-top:.1rem;word-break:break-word}
+.stat .sub{font-size:.72rem;color:var(--muted);margin-top:.15rem}
+
+.tabs{
+  display:flex;gap:0;padding:0 .5rem;
+  border-bottom:1px solid var(--border);
+  overflow-x:auto;-webkit-overflow-scrolling:touch;
+  scrollbar-width:none;position:sticky;top:0;z-index:15;
+  background:var(--bg);
+}
+.tabs::-webkit-scrollbar{display:none}
+.tab{
+  flex:1 0 auto;min-width:max-content;
+  padding:.85rem 1rem;cursor:pointer;color:var(--muted);
+  border-bottom:2px solid transparent;font-weight:600;font-size:.9rem;
+  text-align:center;user-select:none;
+}
 .tab.active{color:var(--accent);border-bottom-color:var(--accent)}
-.panel{display:none;padding:1.2rem 1.4rem}.panel.active{display:block}
-.toolbar{display:flex;flex-wrap:wrap;gap:.6rem;align-items:center;margin-bottom:1rem}
-input[type=text],input[type=search]{background:#0b1220;border:1px solid var(--border);color:var(--text);padding:.5rem .75rem;border-radius:8px;min-width:180px}
-button{background:var(--accent);color:#0b1220;border:none;padding:.45rem .9rem;border-radius:8px;font-weight:700;cursor:pointer;font-size:.85rem}
-button:hover{filter:brightness(1.08)}
+
+.panel{display:none;padding:1rem}
+.panel.active{display:block}
+
+.toolbar{
+  display:flex;flex-wrap:wrap;gap:.5rem;align-items:stretch;
+  margin-bottom:1rem;
+}
+.toolbar input[type=text],
+.toolbar input[type=search]{
+  flex:1 1 100%;width:100%;min-width:0;
+  background:#0b1220;border:1px solid var(--border);color:var(--text);
+  padding:.7rem .85rem;border-radius:10px;font-size:1rem;
+  min-height:var(--touch);
+}
+.toolbar .row-btns{display:flex;flex-wrap:wrap;gap:.5rem;width:100%}
+.toolbar label{
+  display:inline-flex;align-items:center;gap:.4rem;
+  font-size:.85rem;color:var(--muted);min-height:var(--touch);
+  padding:0 .25rem;user-select:none;
+}
+.toolbar label input{width:18px;height:18px;accent-color:var(--accent)}
+
+button{
+  background:var(--accent);color:#0b1220;border:none;
+  padding:.65rem 1rem;border-radius:10px;font-weight:700;
+  cursor:pointer;font-size:.9rem;min-height:var(--touch);
+  min-width:var(--touch);touch-action:manipulation;
+  display:inline-flex;align-items:center;justify-content:center;
+}
+button:active{filter:brightness(.92);transform:scale(.98)}
 button.ghost{background:transparent;color:var(--text);border:1px solid var(--border)}
-button.danger{background:var(--danger);color:#fff}button.ok{background:var(--ok);color:#052e16}
-table{width:100%;border-collapse:collapse;font-size:.88rem}
+button.danger{background:var(--danger);color:#fff}
+button.ok{background:var(--ok);color:#052e16}
+
+/* Desktop table */
+.table-wrap{display:none;width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}
+table{width:100%;border-collapse:collapse;font-size:.88rem;min-width:640px}
 th,td{text-align:left;padding:.55rem .45rem;border-bottom:1px solid var(--border);vertical-align:middle}
-th{color:var(--muted);font-weight:600;font-size:.75rem;text-transform:uppercase;letter-spacing:.03em}
+th{color:var(--muted);font-weight:600;font-size:.72rem;text-transform:uppercase;letter-spacing:.03em}
 tr:hover td{background:rgba(56,189,248,.04)}
 .mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.82rem}
-.pill{display:inline-flex;align-items:center;gap:.3rem;padding:.15rem .5rem;border-radius:999px;font-size:.72rem;font-weight:600}
-.pill-ok{background:#14532d33;color:#86efac}.pill-off{background:#33415555;color:var(--muted)}
-.pill-danger{background:#7f1d1d55;color:#fca5a5}.pill-crit{background:#581c8755;color:#e9d5ff}
-.cfg-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:1rem}
-.cfg-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:1rem}
+
+/* Mobile cards */
+.device-cards{display:flex;flex-direction:column;gap:.65rem}
+.device-card{
+  background:var(--card);border:1px solid var(--border);border-radius:var(--radius);
+  padding:.9rem 1rem;
+}
+.device-card .top{
+  display:flex;justify-content:space-between;align-items:flex-start;gap:.5rem;
+  margin-bottom:.55rem;
+}
+.device-card .ip{font-family:ui-monospace,Menlo,monospace;font-weight:700;font-size:1.05rem}
+.device-card .pills{display:flex;flex-wrap:wrap;gap:.3rem;justify-content:flex-end}
+.device-card .meta{
+  display:grid;grid-template-columns:auto 1fr;gap:.2rem .6rem;
+  font-size:.82rem;color:var(--muted);
+}
+.device-card .meta strong{color:var(--text);font-weight:500;word-break:break-all}
+.device-card .actions{
+  display:flex;flex-wrap:wrap;gap:.4rem;margin-top:.75rem;
+  padding-top:.65rem;border-top:1px solid var(--border);
+}
+.device-card .actions button{flex:1 1 auto;min-width:0;font-size:.85rem}
+
+.pill{
+  display:inline-flex;align-items:center;gap:.25rem;
+  padding:.2rem .5rem;border-radius:999px;font-size:.7rem;font-weight:600;
+}
+.pill-ok{background:#14532d33;color:#86efac}
+.pill-off{background:#33415555;color:var(--muted)}
+.pill-danger{background:#7f1d1d55;color:#fca5a5}
+.pill-crit{background:#581c8755;color:#e9d5ff}
+
+.cfg-grid{display:grid;grid-template-columns:1fr;gap:.85rem}
+.cfg-card{
+  background:var(--card);border:1px solid var(--border);
+  border-radius:var(--radius);padding:1rem;
+}
 .cfg-card h3{font-size:.95rem;margin-bottom:.6rem;color:var(--accent)}
-.cfg-row{display:flex;justify-content:space-between;gap:1rem;padding:.35rem 0;border-bottom:1px solid var(--border);font-size:.88rem}
-.cfg-row:last-child{border-bottom:none}.cfg-row span:first-child{color:var(--muted)}
-.empty{color:var(--muted);padding:2rem;text-align:center}
-.footer{padding:1rem 1.4rem;color:var(--muted);font-size:.78rem;border-top:1px solid var(--border)}
-.actions{display:flex;gap:.35rem;flex-wrap:wrap}
-@media(max-width:700px){table{display:block;overflow-x:auto}}
+.cfg-row{
+  display:flex;justify-content:space-between;gap:.75rem;
+  padding:.4rem 0;border-bottom:1px solid var(--border);font-size:.88rem;
+}
+.cfg-row:last-child{border-bottom:none}
+.cfg-row span:first-child{color:var(--muted);flex-shrink:0}
+.cfg-row span:last-child{text-align:right;word-break:break-all}
+
+.empty{color:var(--muted);padding:2rem 1rem;text-align:center;font-size:.95rem}
+.footer{
+  padding:1rem;color:var(--muted);font-size:.75rem;
+  border-top:1px solid var(--border);text-align:center;
+}
+#mac-filter-status{
+  margin:.5rem 1rem 0;padding:.7rem .9rem;border-radius:10px;font-size:.85rem;
+  line-height:1.35;
+}
+
+/* ≥ 700px: desktop layout */
+@media(min-width:700px){
+  .stats{grid-template-columns:repeat(4,1fr);padding:1rem 1.4rem;gap:.75rem}
+  .stat .value{font-size:1.4rem}
+  header{padding:1.1rem 1.4rem}
+  header h1{font-size:1.25rem}
+  .panel{padding:1.2rem 1.4rem}
+  .tabs{padding:0 1.4rem}
+  .tab{flex:0 0 auto;text-align:left}
+  .toolbar input[type=text],
+  .toolbar input[type=search]{flex:1 1 220px;width:auto;min-width:180px}
+  .toolbar .row-btns{width:auto;flex:0 0 auto}
+  .device-cards{display:none}
+  .table-wrap{display:block}
+  .cfg-grid{grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:1rem}
+  .footer{padding:1rem 1.4rem;text-align:left}
+  #mac-filter-status{margin:.75rem 1.4rem 0}
+}
+
+/* very small phones */
+@media(max-width:360px){
+  .stats{gap:.45rem;padding:.65rem .7rem}
+  .stat{padding:.6rem .65rem}
+  .stat .value{font-size:1.1rem}
+  .panel{padding:.75rem}
+  button{padding:.55rem .7rem;font-size:.82rem}
+}
 </style>
 </head>
 <body>
 <header>
   <div>
     <h1>🛡️ Network Guard</h1>
-    <div style="color:var(--muted);font-size:.85rem;margin-top:.2rem">FritzBox · LAN-Scan · WAN-Isolation</div>
+    <div class="sub">FritzBox · LAN-Scan · WAN-Isolation</div>
   </div>
-  <div id="status-badges" style="display:flex;gap:.4rem;flex-wrap:wrap"></div>
+  <div id="status-badges" style="display:flex;gap:.35rem;flex-wrap:wrap"></div>
 </header>
+<div id="mac-filter-status" style="display:none"></div>
 <div class="stats" id="stats"></div>
 <div class="tabs">
   <div class="tab active" data-tab="devices">Geräte</div>
   <div class="tab" data-tab="blocked">Gesperrt</div>
-  <div class="tab" data-tab="config">Konfiguration</div>
+  <div class="tab" data-tab="config">Config</div>
 </div>
 <section class="panel active" id="panel-devices">
   <div class="toolbar">
-    <input type="search" id="filter" placeholder="Suche IP, MAC, Hostname, Vendor…">
-    <button class="ghost" onclick="refresh()">Aktualisieren</button>
-    <label style="font-size:.85rem;color:var(--muted)"><input type="checkbox" id="only-active"> nur aktiv</label>
-    <label style="font-size:.85rem;color:var(--muted)"><input type="checkbox" id="only-crit"> nur kritisch</label>
+    <input type="search" id="filter" placeholder="Suche IP, MAC, Hostname…" enterkeyhint="search">
+    <div class="row-btns">
+      <button class="ghost" onclick="refresh()">Aktualisieren</button>
+      <label><input type="checkbox" id="only-active"> nur aktiv</label>
+      <label><input type="checkbox" id="only-crit"> kritisch</label>
+    </div>
   </div>
   <div id="devices-table"><div class="empty">Lade Geräte…</div></div>
 </section>
 <section class="panel" id="panel-blocked">
   <div class="toolbar">
-    <input type="text" id="manual-ip" placeholder="IP manuell sperren">
-    <button class="danger" onclick="blockManual()">Sperren</button>
-    <button class="ghost" onclick="refresh()">Aktualisieren</button>
+    <input type="text" id="manual-ip" placeholder="IP manuell sperren" inputmode="decimal">
+    <div class="row-btns">
+      <button class="danger" onclick="blockManual()">Sperren</button>
+      <button class="ghost" onclick="refresh()">Aktualisieren</button>
+    </div>
   </div>
   <div id="blocked-table"><div class="empty">Lade…</div></div>
 </section>
@@ -82,6 +237,7 @@ tr:hover td{background:rgba(56,189,248,.04)}
   <div class="cfg-grid" id="config-grid"></div>
 </section>
 <div class="footer" id="footer">—</div>
+
 <script>
 const $ = s => document.querySelector(s);
 const api = async (path, method='GET', body=null) => {
@@ -99,7 +255,30 @@ document.querySelectorAll('.tab').forEach(t => {
     $('#panel-'+t.dataset.tab).classList.add('active');
   };
 });
-function fmtTime(iso){ if(!iso) return '–'; try{return new Date(iso).toLocaleString()}catch{return iso} }
+function fmtTime(iso){
+  if(!iso) return '–';
+  try{
+    const d = new Date(iso);
+    const isMobile = window.matchMedia('(max-width:699px)').matches;
+    if(isMobile) return d.toLocaleString(undefined,{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
+    return d.toLocaleString();
+  }catch{return iso}
+}
+function statusPills(d){
+  const st=[];
+  if(d.blocked) st.push('<span class="pill pill-danger">gesperrt</span>');
+  if(d.critical) st.push('<span class="pill pill-crit">kritisch</span>');
+  if(d.whitelisted) st.push('<span class="pill pill-ok">whitelist</span>');
+  st.push(d.active?'<span class="pill pill-ok">aktiv</span>':'<span class="pill pill-off">offline</span>');
+  return st.join(' ');
+}
+function actionBtns(d){
+  let a='';
+  if(d.ip&&!d.blocked) a+=`<button class="danger" onclick="blockIp('${d.ip}')">Sperren</button>`;
+  if(d.ip&&d.blocked) a+=`<button class="ok" onclick="unblockIp('${d.ip}')">Entsperren</button>`;
+  if(d.ip) a+=`<button class="ghost" onclick="toggleWhite('${d.ip}','${d.mac||''}')">${d.whitelisted?'Un-WL':'Whitelist'}</button>`;
+  return a;
+}
 function renderStats(s, known, blocked){
   const vals = Object.values(known.devices||{});
   const active = vals.filter(d=>d.active).length;
@@ -108,14 +287,24 @@ function renderStats(s, known, blocked){
     <div class="stat"><div class="label">Geräte</div><div class="value">${known.count||0}</div><div class="sub">${active} aktiv</div></div>
     <div class="stat"><div class="label">Kritisch</div><div class="value" style="color:var(--crit)">${crit}</div><div class="sub">MAC-Prefix</div></div>
     <div class="stat"><div class="label">Gesperrt</div><div class="value" style="color:var(--danger)">${blocked.count||0}</div><div class="sub">WAN blockiert</div></div>
-    <div class="stat"><div class="label">Letzter Scan</div><div class="value" style="font-size:1rem">${fmtTime(s.last_scan)}</div><div class="sub">${s.last_count||0} gefunden · #${s.total_scans||0}</div></div>`;
+    <div class="stat"><div class="label">Scan</div><div class="value" style="font-size:1rem">${fmtTime(s.last_scan)}</div><div class="sub">${s.last_count||0} · #${s.total_scans||0}</div></div>`;
   const badges=[];
-  badges.push(`<span class="badge ${s.fritz_ok===true?'badge-ok':s.fritz_ok===false?'badge-danger':'badge-muted'}">FritzBox ${s.fritz_ok===true?'OK':s.fritz_ok===false?'Fehler':'?'}</span>`);
+  badges.push(`<span class="badge ${s.fritz_ok===true?'badge-ok':s.fritz_ok===false?'badge-danger':'badge-muted'}">Fritz ${s.fritz_ok===true?'OK':s.fritz_ok===false?'Err':'?'}</span>`);
   badges.push(`<span class="badge badge-muted">${s.network_cidr||''}</span>`);
-  badges.push(`<span class="badge badge-muted">Scan ${s.scan_interval||'?'}s</span>`);
-  if(s.auto_block_new) badges.push(`<span class="badge badge-warn">Auto-Block ON</span>`);
+  if(s.mac_filter_active) badges.push(`<span class="badge badge-warn">Auto-Block</span>`);
   $('#status-badges').innerHTML=badges.join('');
-  $('#footer').textContent=s.last_error?('Letzter Fehler: '+s.last_error):'Network Guard bereit';
+  $('#footer').textContent=s.last_error?('Fehler: '+s.last_error):'Network Guard bereit';
+
+  const el = $('#mac-filter-status');
+  if(s.mac_filter_active){
+    el.style.display='block';
+    el.style.background='#3d1f1f'; el.style.color='#ff8a80';
+    el.textContent='MAC-Filter AKTIV – nur bekannte Geräte dürfen ins WLAN';
+  } else {
+    el.style.display='block';
+    el.style.background='#1b2e1b'; el.style.color='#81c784';
+    el.textContent='MAC-Filter aus – normales WLAN';
+  }
 }
 function renderDevices(data){
   let list=Object.values(data.devices||{});
@@ -125,36 +314,72 @@ function renderDevices(data){
   if(q) list=list.filter(d=>[d.ip,d.mac,d.hostname,d.vendor,d.interface,d.source].join(' ').toLowerCase().includes(q));
   list.sort((a,b)=>(a.ip||'').localeCompare(b.ip||'',undefined,{numeric:true}));
   if(!list.length){$('#devices-table').innerHTML='<div class="empty">Keine Geräte (Filter oder noch kein Scan).</div>';return}
-  let html=`<table><thead><tr><th>Status</th><th>IP</th><th>MAC</th><th>Hostname</th><th>Vendor</th><th>Interface</th><th>Quelle</th><th>Zuletzt</th><th></th></tr></thead><tbody>`;
+
+  // Mobile cards
+  let cards='<div class="device-cards">';
   for(const d of list){
-    const st=[];
-    if(d.blocked) st.push('<span class="pill pill-danger">gesperrt</span>');
-    if(d.critical) st.push('<span class="pill pill-crit">kritisch</span>');
-    if(d.whitelisted) st.push('<span class="pill pill-ok">whitelist</span>');
-    st.push(d.active?'<span class="pill pill-ok">aktiv</span>':'<span class="pill pill-off">offline</span>');
-    html+=`<tr>
-      <td>${st.join(' ')}</td>
+    cards+=`<div class="device-card">
+      <div class="top">
+        <div class="ip">${d.ip||'–'}</div>
+        <div class="pills">${statusPills(d)}</div>
+      </div>
+      <div class="meta">
+        <span>MAC</span><strong class="mono">${d.mac||'–'}</strong>
+        <span>Host</span><strong>${d.hostname||'–'}</strong>
+        <span>Vendor</span><strong>${d.vendor||'–'}</strong>
+        <span>If</span><strong>${d.interface||'–'} · ${d.source||'–'}</strong>
+        <span>Seen</span><strong>${fmtTime(d.last_seen)}</strong>
+      </div>
+      <div class="actions">${actionBtns(d)}</div>
+    </div>`;
+  }
+  cards+='</div>';
+
+  // Desktop table
+  let table='<div class="table-wrap"><table><thead><tr><th>Status</th><th>IP</th><th>MAC</th><th>Hostname</th><th>Vendor</th><th>Interface</th><th>Quelle</th><th>Zuletzt</th><th></th></tr></thead><tbody>';
+  for(const d of list){
+    table+=`<tr>
+      <td>${statusPills(d)}</td>
       <td class="mono">${d.ip||'–'}</td><td class="mono">${d.mac||'–'}</td>
       <td>${d.hostname||'–'}</td><td>${d.vendor||'–'}</td><td>${d.interface||'–'}</td>
       <td>${d.source||'–'}</td><td>${fmtTime(d.last_seen)}</td>
-      <td class="actions">
-        ${d.ip&&!d.blocked?`<button class="danger" onclick="blockIp('${d.ip}')">Sperren</button>`:''}
-        ${d.ip&&d.blocked?`<button class="ok" onclick="unblockIp('${d.ip}')">Entsperren</button>`:''}
-        ${d.ip?`<button class="ghost" onclick="toggleWhite('${d.ip}','${d.mac||''}')">${d.whitelisted?'Un-WL':'Whitelist'}</button>`:''}
-      </td></tr>`;
+      <td class="actions">${actionBtns(d)}</td></tr>`;
   }
-  $('#devices-table').innerHTML=html+'</tbody></table>';
+  table+='</tbody></table></div>';
+
+  $('#devices-table').innerHTML=cards+table;
 }
 function renderBlocked(data){
   const devices=Object.values(data.devices||{});
   if(!devices.length){$('#blocked-table').innerHTML='<div class="empty">Keine gesperrten Geräte.</div>';return}
-  let html=`<table><thead><tr><th>IP</th><th>MAC</th><th>Hostname</th><th>Vendor</th><th>Grund</th><th>Seit</th><th></th></tr></thead><tbody>`;
+
+  let cards='<div class="device-cards">';
   for(const d of devices){
-    html+=`<tr><td class="mono">${d.ip}</td><td class="mono">${d.mac||'–'}</td><td>${d.hostname||'–'}</td>
+    cards+=`<div class="device-card">
+      <div class="top">
+        <div class="ip">${d.ip}</div>
+        <div class="pills"><span class="pill pill-danger">${d.reason||'gesperrt'}</span></div>
+      </div>
+      <div class="meta">
+        <span>MAC</span><strong class="mono">${d.mac||'–'}</strong>
+        <span>Host</span><strong>${d.hostname||'–'}</strong>
+        <span>Vendor</span><strong>${d.vendor||'–'}</strong>
+        <span>Seit</span><strong>${fmtTime(d.blocked_at)}</strong>
+      </div>
+      <div class="actions"><button class="ok" onclick="unblockIp('${d.ip}')">Entsperren</button></div>
+    </div>`;
+  }
+  cards+='</div>';
+
+  let table='<div class="table-wrap"><table><thead><tr><th>IP</th><th>MAC</th><th>Hostname</th><th>Vendor</th><th>Grund</th><th>Seit</th><th></th></tr></thead><tbody>';
+  for(const d of devices){
+    table+=`<tr><td class="mono">${d.ip}</td><td class="mono">${d.mac||'–'}</td><td>${d.hostname||'–'}</td>
       <td>${d.vendor||'–'}</td><td><span class="pill pill-danger">${d.reason||'–'}</span></td>
       <td>${fmtTime(d.blocked_at)}</td><td><button class="ok" onclick="unblockIp('${d.ip}')">Entsperren</button></td></tr>`;
   }
-  $('#blocked-table').innerHTML=html+'</tbody></table>';
+  table+='</tbody></table></div>';
+
+  $('#blocked-table').innerHTML=cards+table;
 }
 function renderConfig(s){
   const rows=o=>Object.entries(o).map(([k,v])=>`<div class="cfg-row"><span>${k}</span><span class="mono">${v??'–'}</span></div>`).join('');
