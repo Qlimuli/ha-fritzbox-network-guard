@@ -1,9 +1,9 @@
 #!/usr/bin/with-contenv bashio
 # ==============================================================================
-# FritzBox Network Guard add-on
+# FritzBox Network Guard add-on 1.4.1
 # ==============================================================================
 
-bashio::log.info "Starting FritzBox Network Guard 1.4.0..."
+bashio::log.info "Starting FritzBox Network Guard 1.4.1..."
 
 export FRITZBOX_HOST=$(bashio::config 'fritzbox_host')
 export FRITZBOX_USER=$(bashio::config 'fritzbox_user')
@@ -26,13 +26,28 @@ mkdir -p "${DATA_DIR}"
 bashio::log.info "FritzBox host: ${FRITZBOX_HOST}"
 bashio::log.info "Scan interval: ${SCAN_INTERVAL}s"
 bashio::log.info "Network: ${NETWORK_CIDR}"
-bashio::log.info "Perimeter: ${ENABLE_PERIMETER_SCAN} every ${PERIMETER_INTERVAL}s"
-bashio::log.info "Threat-Intel: ${ENABLE_THREAT_INTEL} every ${THREAT_INTEL_INTERVAL}s"
 
 APP_HOME="/opt/network-guard"
+
+# Assemble ui.html from gzip+b64 chunks if present
+python3 - <<'PY'
+from pathlib import Path
+import base64, gzip, sys
+p = Path("/opt/network-guard")
+chunks = sorted(p.glob("ui.b64.*"))
+if chunks:
+    try:
+        b64 = "".join(c.read_text().strip() for c in chunks)
+        data = gzip.decompress(base64.b64decode(b64))
+        (p / "ui.html").write_bytes(data)
+        print(f"Assembled ui.html from {len(chunks)} chunks ({len(data)} bytes)", file=sys.stderr)
+    except Exception as exc:
+        print(f"ui assemble failed (using bundled ui.html): {exc}", file=sys.stderr)
+PY
+
 if [ ! -f "${APP_HOME}/main.py" ]; then
-  bashio::log.error "${APP_HOME}/main.py missing – image build incomplete"
-  ls -la "${APP_HOME}" /app 2>/dev/null || true
+  bashio::log.error "${APP_HOME}/main.py missing"
+  ls -la "${APP_HOME}" 2>/dev/null || true
   exit 1
 fi
 
