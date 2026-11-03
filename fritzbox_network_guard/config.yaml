@@ -1,5 +1,5 @@
 name: "FritzBox Network Guard"
-version: "1.3.4"
+version: "1.4.0"
 slug: fritzbox_network_guard
 description: >-
   LAN-Scan, MAC-Quarantäne, Perimeter-Portscan der öffentlichen IP,
@@ -33,6 +33,11 @@ options:
   critical_mac_prefixes: ""
   auto_block_new_devices: false
   notify_on_block: true
+  enable_perimeter_scan: true
+  perimeter_interval: 3600
+  enable_threat_intel: true
+  threat_intel_interval: 21600
+  auto_block_threat_intel: true
 schema:
   fritzbox_host: str
   fritzbox_user: str
@@ -42,6 +47,11 @@ schema:
   critical_mac_prefixes: str?
   auto_block_new_devices: bool
   notify_on_block: bool
+  enable_perimeter_scan: bool
+  perimeter_interval: int(300,86400)
+  enable_threat_intel: bool
+  threat_intel_interval: int(3600,86400)
+  auto_block_threat_intel: bool
 homeassistant_api: true
 hassio_api: true
 ingress: true
