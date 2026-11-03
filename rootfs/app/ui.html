@@ -1,1 +1,180 @@
-see_next
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>FritzBox Network Guard</title>
+<style>
+:root{--bg:#0b1220;--panel:#111827;--card:#1a2332;--border:#243044;--text:#e5eefb;--muted:#8b9bb4;--accent:#38bdf8;--ok:#22c55e;--warn:#f59e0b;--danger:#ef4444;--crit:#a855f7}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Inter,system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--text);line-height:1.45;min-height:100vh}
+header{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:1rem;padding:1.1rem 1.4rem;border-bottom:1px solid var(--border);background:linear-gradient(180deg,#121a2b,var(--bg))}
+header h1{font-size:1.25rem;font-weight:700;display:flex;align-items:center;gap:.5rem}
+.badge{font-size:.72rem;padding:.2rem .55rem;border-radius:999px;font-weight:600}
+.badge-ok{background:#14532d;color:#86efac}.badge-warn{background:#78350f;color:#fcd34d}
+.badge-danger{background:#7f1d1d;color:#fca5a5}.badge-muted{background:#1e293b;color:var(--muted)}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:.75rem;padding:1rem 1.4rem}
+.stat{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:.9rem 1rem}
+.stat .label{font-size:.75rem;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+.stat .value{font-size:1.45rem;font-weight:700;margin-top:.15rem}
+.stat .sub{font-size:.75rem;color:var(--muted);margin-top:.2rem}
+.tabs{display:flex;gap:.35rem;padding:0 1.4rem;border-bottom:1px solid var(--border);overflow-x:auto}
+.tab{padding:.7rem 1rem;cursor:pointer;color:var(--muted);border-bottom:2px solid transparent;font-weight:600;font-size:.9rem;white-space:nowrap}
+.tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+.panel{display:none;padding:1.2rem 1.4rem}.panel.active{display:block}
+.toolbar{display:flex;flex-wrap:wrap;gap:.6rem;align-items:center;margin-bottom:1rem}
+input[type=text],input[type=search]{background:#0b1220;border:1px solid var(--border);color:var(--text);padding:.5rem .75rem;border-radius:8px;min-width:180px}
+button{background:var(--accent);color:#0b1220;border:none;padding:.45rem .9rem;border-radius:8px;font-weight:700;cursor:pointer;font-size:.85rem}
+button:hover{filter:brightness(1.08)}
+button.ghost{background:transparent;color:var(--text);border:1px solid var(--border)}
+button.danger{background:var(--danger);color:#fff}button.ok{background:var(--ok);color:#052e16}
+table{width:100%;border-collapse:collapse;font-size:.88rem}
+th,td{text-align:left;padding:.55rem .45rem;border-bottom:1px solid var(--border);vertical-align:middle}
+th{color:var(--muted);font-weight:600;font-size:.75rem;text-transform:uppercase;letter-spacing:.03em}
+tr:hover td{background:rgba(56,189,248,.04)}
+.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.82rem}
+.pill{display:inline-flex;align-items:center;gap:.3rem;padding:.15rem .5rem;border-radius:999px;font-size:.72rem;font-weight:600}
+.pill-ok{background:#14532d33;color:#86efac}.pill-off{background:#33415555;color:var(--muted)}
+.pill-danger{background:#7f1d1d55;color:#fca5a5}.pill-crit{background:#581c8755;color:#e9d5ff}
+.cfg-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:1rem}
+.cfg-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:1rem}
+.cfg-card h3{font-size:.95rem;margin-bottom:.6rem;color:var(--accent)}
+.cfg-row{display:flex;justify-content:space-between;gap:1rem;padding:.35rem 0;border-bottom:1px solid var(--border);font-size:.88rem}
+.cfg-row:last-child{border-bottom:none}.cfg-row span:first-child{color:var(--muted)}
+.empty{color:var(--muted);padding:2rem;text-align:center}
+.footer{padding:1rem 1.4rem;color:var(--muted);font-size:.78rem;border-top:1px solid var(--border)}
+.actions{display:flex;gap:.35rem;flex-wrap:wrap}
+@media(max-width:700px){table{display:block;overflow-x:auto}}
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>🛡️ Network Guard</h1>
+    <div style="color:var(--muted);font-size:.85rem;margin-top:.2rem">FritzBox · LAN-Scan · WAN-Isolation</div>
+  </div>
+  <div id="status-badges" style="display:flex;gap:.4rem;flex-wrap:wrap"></div>
+</header>
+<div class="stats" id="stats"></div>
+<div class="tabs">
+  <div class="tab active" data-tab="devices">Geräte</div>
+  <div class="tab" data-tab="blocked">Gesperrt</div>
+  <div class="tab" data-tab="config">Konfiguration</div>
+</div>
+<section class="panel active" id="panel-devices">
+  <div class="toolbar">
+    <input type="search" id="filter" placeholder="Suche IP, MAC, Hostname, Vendor…">
+    <button class="ghost" onclick="refresh()">Aktualisieren</button>
+    <label style="font-size:.85rem;color:var(--muted)"><input type="checkbox" id="only-active"> nur aktiv</label>
+    <label style="font-size:.85rem;color:var(--muted)"><input type="checkbox" id="only-crit"> nur kritisch</label>
+  </div>
+  <div id="devices-table"><div class="empty">Lade Geräte…</div></div>
+</section>
+<section class="panel" id="panel-blocked">
+  <div class="toolbar">
+    <input type="text" id="manual-ip" placeholder="IP manuell sperren">
+    <button class="danger" onclick="blockManual()">Sperren</button>
+    <button class="ghost" onclick="refresh()">Aktualisieren</button>
+  </div>
+  <div id="blocked-table"><div class="empty">Lade…</div></div>
+</section>
+<section class="panel" id="panel-config">
+  <div class="cfg-grid" id="config-grid"></div>
+</section>
+<div class="footer" id="footer">—</div>
+<script>
+const $ = s => document.querySelector(s);
+const api = async (path, method='GET', body=null) => {
+  const opts = {method, headers:{'Content-Type':'application/json'}};
+  if (body) opts.body = JSON.stringify(body);
+  const r = await fetch(path, opts);
+  if (!r.ok) throw new Error(await r.text());
+  return r.json();
+};
+document.querySelectorAll('.tab').forEach(t => {
+  t.onclick = () => {
+    document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(x => x.classList.remove('active'));
+    t.classList.add('active');
+    $('#panel-'+t.dataset.tab).classList.add('active');
+  };
+});
+function fmtTime(iso){ if(!iso) return '–'; try{return new Date(iso).toLocaleString()}catch{return iso} }
+function renderStats(s, known, blocked){
+  const vals = Object.values(known.devices||{});
+  const active = vals.filter(d=>d.active).length;
+  const crit = vals.filter(d=>d.critical).length;
+  $('#stats').innerHTML = `
+    <div class="stat"><div class="label">Geräte</div><div class="value">${known.count||0}</div><div class="sub">${active} aktiv</div></div>
+    <div class="stat"><div class="label">Kritisch</div><div class="value" style="color:var(--crit)">${crit}</div><div class="sub">MAC-Prefix</div></div>
+    <div class="stat"><div class="label">Gesperrt</div><div class="value" style="color:var(--danger)">${blocked.count||0}</div><div class="sub">WAN blockiert</div></div>
+    <div class="stat"><div class="label">Letzter Scan</div><div class="value" style="font-size:1rem">${fmtTime(s.last_scan)}</div><div class="sub">${s.last_count||0} gefunden · #${s.total_scans||0}</div></div>`;
+  const badges=[];
+  badges.push(`<span class="badge ${s.fritz_ok===true?'badge-ok':s.fritz_ok===false?'badge-danger':'badge-muted'}">FritzBox ${s.fritz_ok===true?'OK':s.fritz_ok===false?'Fehler':'?'}</span>`);
+  badges.push(`<span class="badge badge-muted">${s.network_cidr||''}</span>`);
+  badges.push(`<span class="badge badge-muted">Scan ${s.scan_interval||'?'}s</span>`);
+  if(s.auto_block_new) badges.push(`<span class="badge badge-warn">Auto-Block ON</span>`);
+  $('#status-badges').innerHTML=badges.join('');
+  $('#footer').textContent=s.last_error?('Letzter Fehler: '+s.last_error):'Network Guard bereit';
+}
+function renderDevices(data){
+  let list=Object.values(data.devices||{});
+  const q=($('#filter').value||'').toLowerCase();
+  if($('#only-active').checked) list=list.filter(d=>d.active);
+  if($('#only-crit').checked) list=list.filter(d=>d.critical);
+  if(q) list=list.filter(d=>[d.ip,d.mac,d.hostname,d.vendor,d.interface,d.source].join(' ').toLowerCase().includes(q));
+  list.sort((a,b)=>(a.ip||'').localeCompare(b.ip||'',undefined,{numeric:true}));
+  if(!list.length){$('#devices-table').innerHTML='<div class="empty">Keine Geräte (Filter oder noch kein Scan).</div>';return}
+  let html=`<table><thead><tr><th>Status</th><th>IP</th><th>MAC</th><th>Hostname</th><th>Vendor</th><th>Interface</th><th>Quelle</th><th>Zuletzt</th><th></th></tr></thead><tbody>`;
+  for(const d of list){
+    const st=[];
+    if(d.blocked) st.push('<span class="pill pill-danger">gesperrt</span>');
+    if(d.critical) st.push('<span class="pill pill-crit">kritisch</span>');
+    if(d.whitelisted) st.push('<span class="pill pill-ok">whitelist</span>');
+    st.push(d.active?'<span class="pill pill-ok">aktiv</span>':'<span class="pill pill-off">offline</span>');
+    html+=`<tr>
+      <td>${st.join(' ')}</td>
+      <td class="mono">${d.ip||'–'}</td><td class="mono">${d.mac||'–'}</td>
+      <td>${d.hostname||'–'}</td><td>${d.vendor||'–'}</td><td>${d.interface||'–'}</td>
+      <td>${d.source||'–'}</td><td>${fmtTime(d.last_seen)}</td>
+      <td class="actions">
+        ${d.ip&&!d.blocked?`<button class="danger" onclick="blockIp('${d.ip}')">Sperren</button>`:''}
+        ${d.ip&&d.blocked?`<button class="ok" onclick="unblockIp('${d.ip}')">Entsperren</button>`:''}
+        ${d.ip?`<button class="ghost" onclick="toggleWhite('${d.ip}','${d.mac||''}')">${d.whitelisted?'Un-WL':'Whitelist'}</button>`:''}
+      </td></tr>`;
+  }
+  $('#devices-table').innerHTML=html+'</tbody></table>';
+}
+function renderBlocked(data){
+  const devices=Object.values(data.devices||{});
+  if(!devices.length){$('#blocked-table').innerHTML='<div class="empty">Keine gesperrten Geräte.</div>';return}
+  let html=`<table><thead><tr><th>IP</th><th>MAC</th><th>Hostname</th><th>Vendor</th><th>Grund</th><th>Seit</th><th></th></tr></thead><tbody>`;
+  for(const d of devices){
+    html+=`<tr><td class="mono">${d.ip}</td><td class="mono">${d.mac||'–'}</td><td>${d.hostname||'–'}</td>
+      <td>${d.vendor||'–'}</td><td><span class="pill pill-danger">${d.reason||'–'}</span></td>
+      <td>${fmtTime(d.blocked_at)}</td><td><button class="ok" onclick="unblockIp('${d.ip}')">Entsperren</button></td></tr>`;
+  }
+  $('#blocked-table').innerHTML=html+'</tbody></table>';
+}
+function renderConfig(s){
+  const rows=o=>Object.entries(o).map(([k,v])=>`<div class="cfg-row"><span>${k}</span><span class="mono">${v??'–'}</span></div>`).join('');
+  $('#config-grid').innerHTML=`
+    <div class="cfg-card"><h3>Scan</h3>${rows({'Netzwerk':s.network_cidr,'Intervall (s)':s.scan_interval,'Letzter Scan':fmtTime(s.last_scan),'Geräte letzter Scan':s.last_count,'Scans gesamt':s.total_scans})}</div>
+    <div class="cfg-card"><h3>FritzBox</h3>${rows({'Host':s.fritzbox_host,'User gesetzt':s.fritzbox_user_set?'ja':'nein','Verbindung':s.fritz_ok===true?'OK':s.fritz_ok===false?'Fehler':'?','Letzter Fehler':s.last_error||'–'})}</div>
+    <div class="cfg-card"><h3>Policy</h3>${rows({'Auto-Block neue Geräte':s.auto_block_new?'AN':'AUS','HA-Benachrichtigung':s.notify_on_block?'AN':'AUS','Kritische MAC-Präfixe':(s.critical_mac_prefixes||[]).join(', ')||'(keine)','Whitelist':s.whitelist_count})}</div>`;
+}
+async function refresh(){
+  try{
+    const [status,known,blocked]=await Promise.all([api('api/status'),api('api/known'),api('api/blocked')]);
+    renderStats(status,known,blocked); renderDevices(known); renderBlocked(blocked); renderConfig(status);
+  }catch(e){ $('#devices-table').innerHTML=`<div class="empty">API-Fehler: ${e.message}</div>`; console.error(e); }
+}
+async function blockIp(ip){ if(!confirm('WAN für '+ip+' sperren?'))return; const r=await api('api/block','POST',{ip,reason:'manual'}); alert(r.message||'OK'); refresh(); }
+async function unblockIp(ip){ if(!confirm(ip+' entsperren?'))return; const r=await api('api/unblock','POST',{ip}); alert(r.message||'OK'); refresh(); }
+async function blockManual(){ const ip=$('#manual-ip').value.trim(); if(!ip)return; await blockIp(ip); $('#manual-ip').value=''; }
+async function toggleWhite(ip,mac){ const r=await api('api/whitelist','POST',{ip,mac}); alert(r.message||'OK'); refresh(); }
+$('#filter').oninput=()=>refresh(); $('#only-active').onchange=()=>refresh(); $('#only-crit').onchange=()=>refresh();
+refresh(); setInterval(refresh,10000);
+</script>
+</body>
+</html>
