@@ -1,0 +1,32 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install test deps
+        run: pip install pytest
+      - name: Policy tests
+        run: python tests/test_policy.py
+      - name: State tests
+        run: python tests/test_state.py
+
+  lint-addon:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check required files
+        run: |
+          test -f fritzbox_network_guard/config.yaml
+          test -f fritzbox_network_guard/Dockerfile
+          test -f fritzbox_network_guard/rootfs/run.sh
+          test -f fritzbox_network_guard/rootfs/app/main.py
