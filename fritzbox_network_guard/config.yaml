@@ -1,5 +1,5 @@
 name: "FritzBox Network Guard"
-version: "2.0.0"
+version: "2.0.1"
 slug: fritzbox_network_guard
 description: >-
   LAN-Überwachung mit Lernmodus, Schutz vor Selbst-Aussperrung, WAN-Sperre
