@@ -1,11 +1,9 @@
 name: "FritzBox Network Guard"
-version: "1.5.1"
+version: "1.5.2"
 slug: fritzbox_network_guard
 description: >-
-  LAN-Scan, MAC-Quarantäne, Perimeter-Portscan der öffentlichen IP,
-  Threat-Intelligence (FireHOL/Spamhaus), IDS-Webhooks (Suricata/Wazuh).
-  Bei Alarmen: WAN-Sperre auf der FritzBox + optional MAC-Filter.
-  Entsperren über die Add-on-GUI.
+  LAN-Scan, MAC-Quarantäne, Perimeter-Portscan, Threat-Intelligence.
+  Klare Interface-Labels (LAN/WLAN/Gast), detaillierte Analysen, Event-Cooldown.
 arch:
   - aarch64
   - amd64
@@ -18,7 +16,7 @@ host_network: true
 ports:
   8099/tcp: 8099
 ports_description:
-  8099/tcp: Web UI for blocked devices & controls
+  8099/tcp: Web UI
 map:
   - type: share
     read_only: false
