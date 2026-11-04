@@ -59,5 +59,55 @@ def _load_code() -> str:
 
     raise SystemExit("No valid application payload found")
 
-code = _load_code()
+def _patch_active_only(code: str) -> str:
+    """Only actively connected devices are auto-blocked / threat-detected."""
+    old = (
+        "                    should_block = False\n"
+        "                    reason = \"\"\n"
+        "                    if entry.get(\"whitelisted\"):\n"
+        "                        pass\n"
+        "                    elif AUTO_BLOCK_NEW and not was_known and ip:\n"
+        "                        should_block, reason = True, \"new unknown device\"\n"
+        "                    elif entry.get(\"critical\") and ip and ip not in blocked_devices:\n"
+        "                        should_block, reason = True, \"critical MAC prefix\""
+    )
+    new = (
+        "                    should_block = False\n"
+        "                    reason = \"\"\n"
+        "                    # Only actively connected devices pose an active threat\n"
+        "                    if entry.get(\"whitelisted\"):\n"
+        "                        pass\n"
+        "                    elif not entry.get(\"active\"):\n"
+        "                        pass\n"
+        "                    elif AUTO_BLOCK_NEW and not was_known and ip:\n"
+        "                        should_block, reason = True, \"new unknown device\"\n"
+        "                    elif entry.get(\"critical\") and ip and ip not in blocked_devices:\n"
+        "                        should_block, reason = True, \"critical MAC prefix\""
+    )
+    if old in code:
+        code = code.replace(old, new, 1)
+        print("Patched: auto-block only for active devices", file=sys.stderr)
+    else:
+        print("WARN: auto-block active patch not applied", file=sys.stderr)
+
+    old2 = (
+        "                sec.detect_ip_mac_conflict(device_list)\n"
+        "                for d in device_list:\n"
+        "                    if d.get(\"active\"):\n"
+        "                        sec.observe_device(d)"
+    )
+    new2 = (
+        "                active_list = [d for d in device_list if d.get(\"active\")]\n"
+        "                sec.detect_ip_mac_conflict(active_list)\n"
+        "                for d in active_list:\n"
+        "                    sec.observe_device(d)"
+    )
+    if old2 in code:
+        code = code.replace(old2, new2, 1)
+        print("Patched: MAC-conflict only on active devices", file=sys.stderr)
+    else:
+        print("WARN: conflict active patch not applied", file=sys.stderr)
+    return code
+
+code = _patch_active_only(_load_code())
 exec(compile(code, str(HERE / "main_assembled.py"), "exec"), globals())
