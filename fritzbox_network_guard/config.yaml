@@ -1,9 +1,9 @@
 name: "FritzBox Network Guard"
-version: "1.5.2"
+version: "1.5.3"
 slug: fritzbox_network_guard
 description: >-
   LAN-Scan, MAC-Quarantäne, Perimeter-Portscan, Threat-Intelligence.
-  Klare Interface-Labels (LAN/WLAN/Gast), detaillierte Analysen, Event-Cooldown.
+  Klare Interface-Labels (LAN/WLAN/Gast), Event-Cooldown, keine 401-Spam ohne Passwort.
 arch:
   - aarch64
   - amd64
