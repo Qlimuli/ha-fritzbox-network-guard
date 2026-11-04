@@ -1,35 +1,79 @@
 #!/usr/bin/env python3
-"""Assemble v2 modules from gzip+b64 chunks, then run main application."""
+"""Load application from main_full.b64.* chunks (production payload)."""
 from __future__ import annotations
-import base64, gzip, sys
+import base64
+import gzip
+import sys
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 
-def assemble(prefix: str, dest: str) -> None:
-    chunks = sorted(HERE.glob(f"{prefix}.b64.*"))
-    if not chunks:
-        return
-    b64 = "".join(c.read_text().strip() for c in chunks)
-    data = gzip.decompress(base64.b64decode(b64))
-    (HERE / dest).write_bytes(data)
-    print(f"assembled {dest} ({len(data)} bytes)", file=sys.stderr)
+def _load_code() -> str:
+    chunks = sorted(HERE.glob("main_full.b64.*"))
+    if chunks:
+        try:
+            b64 = "".join(c.read_text().strip() for c in chunks)
+            data = gzip.decompress(base64.b64decode(b64))
+            print(f"Assembled main_full from {len(chunks)} chunks ({len(data)} bytes)", file=sys.stderr)
+            return data.decode("utf-8")
+        except Exception as e:
+            print(f"main_full chunks failed: {e}", file=sys.stderr)
 
-for prefix, dest in [
-    ("v2_state", "state.py"),
-    ("v2_fritz", "fritz_client.py"),
-    ("v2_discovery", "discovery.py"),
-    ("v2_ha", "ha_integration.py"),
-    ("v2_ui", "ui.html"),
-    ("v2_main", "main_app.py"),
-]:
-    try:
-        assemble(prefix, dest)
-    except Exception as e:
-        print(f"assemble {prefix} failed: {e}", file=sys.stderr)
+    full = HERE / "main_full.gz.b64"
+    if full.exists():
+        try:
+            data = gzip.decompress(base64.b64decode(full.read_text().strip()))
+            print(f"Loaded main_full.gz.b64 ({len(data)} bytes)", file=sys.stderr)
+            return data.decode("utf-8")
+        except Exception as e:
+            print(f"main_full.gz.b64 failed: {e}", file=sys.stderr)
 
-app = HERE / "main_app.py"
-if not app.exists():
-    raise SystemExit("main_app.py missing after assemble")
-code = app.read_text(encoding="utf-8")
-exec(compile(code, str(app), "exec"), {"__name__": "__main__", "__file__": str(app)})
+    raise SystemExit("No valid application payload found (main_full.b64.*)")
+
+def _patch_safety(code: str) -> str:
+    """Only actively connected devices; skip inactive for auto-block."""
+    old = (
+        "                    should_block = False\n"
+        "                    reason = \"\"\n"
+        "                    if entry.get(\"whitelisted\"):\n"
+        "                        pass\n"
+        "                    elif AUTO_BLOCK_NEW and not was_known and ip:\n"
+        "                        should_block, reason = True, \"new unknown device\"\n"
+        "                    elif entry.get(\"critical\") and ip and ip not in blocked_devices:\n"
+        "                        should_block, reason = True, \"critical MAC prefix\""
+    )
+    new = (
+        "                    should_block = False\n"
+        "                    reason = \"\"\n"
+        "                    # Only actively connected devices pose an active threat\n"
+        "                    if entry.get(\"whitelisted\"):\n"
+        "                        pass\n"
+        "                    elif not entry.get(\"active\"):\n"
+        "                        pass\n"
+        "                    elif AUTO_BLOCK_NEW and not was_known and ip:\n"
+        "                        should_block, reason = True, \"new unknown device\"\n"
+        "                    elif entry.get(\"critical\") and ip and ip not in blocked_devices:\n"
+        "                        should_block, reason = True, \"critical MAC prefix\""
+    )
+    if old in code:
+        code = code.replace(old, new, 1)
+        print("Patched: auto-block only for active devices", file=sys.stderr)
+    old2 = (
+        "                sec.detect_ip_mac_conflict(device_list)\n"
+        "                for d in device_list:\n"
+        "                    if d.get(\"active\"):\n"
+        "                        sec.observe_device(d)"
+    )
+    new2 = (
+        "                active_list = [d for d in device_list if d.get(\"active\")]\n"
+        "                sec.detect_ip_mac_conflict(active_list)\n"
+        "                for d in active_list:\n"
+        "                    sec.observe_device(d)"
+    )
+    if old2 in code:
+        code = code.replace(old2, new2, 1)
+        print("Patched: MAC-conflict only on active devices", file=sys.stderr)
+    return code
+
+code = _patch_safety(_load_code())
+exec(compile(code, str(HERE / "main_assembled.py"), "exec"), globals())
