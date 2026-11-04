@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Assemble application code and execute.
+"""Load application code and execute.
 
 Order:
-  1. main_part_*.py / main_part_*.b64 (sorted by number) if present
-  2. main_full.gz.b64 (gzip+base64 of full main.py)
-  3. Fallback download from known good commit
+  1. main_full.gz.b64 (gzip+base64 of full main.py) – preferred
+  2. main_part_*.py / main_part_*.b64 (sorted, deduped)
+  3. Fallback download
 """
 from __future__ import annotations
 import base64
@@ -23,6 +23,12 @@ def _num(p: Path) -> int:
 
 
 def _load_code() -> str:
+    full = HERE / "main_full.gz.b64"
+    if full.exists():
+        data = gzip.decompress(base64.b64decode(full.read_text().strip()))
+        print(f"Loaded main_full.gz.b64 ({len(data)} bytes)", file=sys.stderr)
+        return data.decode("utf-8")
+
     pieces: list[tuple[int, str]] = []
     for p in HERE.glob("main_part_*.py"):
         pieces.append((_num(p), p.read_text(encoding="utf-8")))
@@ -40,17 +46,11 @@ def _load_code() -> str:
         print(f"Assembled {len(ordered)} main parts", file=sys.stderr)
         return "".join(ordered)
 
-    full = HERE / "main_full.gz.b64"
-    if full.exists():
-        data = gzip.decompress(base64.b64decode(full.read_text().strip()))
-        print(f"Loaded main_full.gz.b64 ({len(data)} bytes)", file=sys.stderr)
-        return data.decode("utf-8")
-
     url = (
         "https://raw.githubusercontent.com/Qlimuli/ha-fritzbox-network-guard/"
         "main/fritzbox_network_guard/rootfs/app/main_full.gz.b64"
     )
-    print("No main parts – downloading main_full.gz.b64 fallback", file=sys.stderr)
+    print("Downloading main_full.gz.b64 fallback", file=sys.stderr)
     with urllib.request.urlopen(url, timeout=30) as r:
         data = gzip.decompress(base64.b64decode(r.read()))
         return data.decode("utf-8")
