@@ -1,5 +1,5 @@
 name: "FritzBox Network Guard"
-version: "1.4.4"
+version: "1.5.0"
 slug: fritzbox_network_guard
 description: >-
   LAN-Scan, MAC-Quarantäne, Perimeter-Portscan der öffentlichen IP,
