@@ -1,6 +1,6 @@
 #!/usr/bin/with-contenv bashio
-# FritzBox Network Guard 1.5.2
-bashio::log.info "Starting FritzBox Network Guard 1.5.2..."
+# FritzBox Network Guard 1.5.4
+bashio::log.info "Starting FritzBox Network Guard 1.5.4..."
 
 export FRITZBOX_HOST=$(bashio::config 'fritzbox_host')
 export FRITZBOX_USER=$(bashio::config 'fritzbox_user')
