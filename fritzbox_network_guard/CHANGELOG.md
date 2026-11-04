@@ -1,22 +1,22 @@
 # Changelog
 
-## 1.5.5
-- Only actively connected devices are auto-blocked / threat-detected (inactive Fritz history entries are ignored for blocking and MAC-conflict checks). Offline devices cannot pose an active threat.
+## 2.0.0 – Safety & Visibility rewrite
+- Modes: `learning` | `monitor` | `enforce` (default **learning**)
+- Hard protected devices (whitelist, HA host, gateway, Fritz, local IPs) – never blocked
+- Circuit breaker: empty/shrunk host list, Fritz down, max blocks per cycle
+- Identity by MAC; DHCP rebind re-applies WAN block; randomized/LAA MACs never auto-blocked
+- Atomic `/data/state.json`, append-only `/data/audit.jsonl`, startup reconcile via `GetWANAccessByIP`
+- Fritz client: HTTPS:49443 option, auth backoff, session reuse
+- API: Ingress-only (no host port), optional `api_token`, CSRF, input validation, security headers
+- Risk score with factors; device inventory; router port-mapping view; HA sensors/events
+- Plain Python modules (no obfuscated payload for core logic)
+- pytest coverage for policy and state
 
-## 1.3.1
-- Repository structure fixed for Home Assistant Add-on Store (addon in subdirectory)
-- Version bump so Supervisor detects the update
+## 1.5.5
+- Only actively connected devices auto-blocked / threat-detected
+
+## 1.5.4
+- Interface labels, event cooldown
 
 ## 1.3.0
-- SecurityEngine: perimeter port scan of public IP
-- Threat intelligence (FireHOL level1, Spamhaus DROP/EDROP)
-- MAC conflict / spoofing heuristics
-- IDS webhook endpoint for Suricata / Wazuh / Zeek
-- API: /api/security/*
-
-## 1.2.0
-- MAC quarantine / dynamic filter
-- Mobile-optimized UI
-
-## 1.0.0
-- Initial release: LAN scan, FritzBox WAN block, Web UI
+- SecurityEngine perimeter / threat intel (optional, off by default in 2.0)

@@ -1,9 +1,9 @@
 name: "FritzBox Network Guard"
-version: "1.5.5"
+version: "2.0.0"
 slug: fritzbox_network_guard
 description: >-
-  LAN-Scan, MAC-Quarantäne, Perimeter-Portscan, Threat-Intelligence.
-  Klare Interface-Labels (LAN/WLAN/Gast), Event-Cooldown, keine 401-Spam ohne Passwort.
+  LAN-Überwachung mit Lernmodus, Schutz vor Selbst-Aussperrung, WAN-Sperre
+  über FritzBox TR-064 (X_AVM-DE_HostFilter), Risiko-Score und Audit-Log.
 arch:
   - aarch64
   - amd64
@@ -13,10 +13,6 @@ init: false
 startup: application
 boot: auto
 host_network: true
-ports:
-  8099/tcp: 8099
-ports_description:
-  8099/tcp: Web UI
 map:
   - type: share
     read_only: false
@@ -26,30 +22,52 @@ options:
   fritzbox_host: "fritz.box"
   fritzbox_user: ""
   fritzbox_password: ""
+  fritzbox_use_https: true
+  fritzbox_verify_tls: false
+  mode: learning
+  learning_days: 7
   scan_interval: 60
   network_cidr: "192.168.178.0/24"
+  full_scan_interval_hours: 24
   critical_mac_prefixes: ""
   auto_block_new_devices: false
+  whitelist_macs: ""
+  whitelist_ips: ""
+  max_blocks_per_cycle: 3
+  dry_run: false
   notify_on_block: true
-  enable_perimeter_scan: true
-  perimeter_interval: 3600
-  enable_threat_intel: true
-  threat_intel_interval: 21600
-  auto_block_threat_intel: true
+  notify_threshold: 40
+  block_threshold: 70
+  notify_service: "persistent_notification.create"
+  api_token: ""
+  enable_metrics: false
+  enable_perimeter_scan: false
+  enable_threat_intel: false
 schema:
   fritzbox_host: str
   fritzbox_user: str
   fritzbox_password: password
+  fritzbox_use_https: bool
+  fritzbox_verify_tls: bool
+  mode: list(learning|monitor|enforce)
+  learning_days: int(1,90)
   scan_interval: int(10,3600)
   network_cidr: str
+  full_scan_interval_hours: int(1,168)
   critical_mac_prefixes: str?
   auto_block_new_devices: bool
+  whitelist_macs: str?
+  whitelist_ips: str?
+  max_blocks_per_cycle: int(1,50)
+  dry_run: bool
   notify_on_block: bool
+  notify_threshold: int(0,100)
+  block_threshold: int(0,100)
+  notify_service: str?
+  api_token: password
+  enable_metrics: bool
   enable_perimeter_scan: bool
-  perimeter_interval: int(300,86400)
   enable_threat_intel: bool
-  threat_intel_interval: int(3600,86400)
-  auto_block_threat_intel: bool
 homeassistant_api: true
 hassio_api: true
 ingress: true
