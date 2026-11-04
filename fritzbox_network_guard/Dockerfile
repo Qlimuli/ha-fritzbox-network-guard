@@ -49,11 +49,13 @@ elif chunks:
     data = gzip.decompress(base64.b64decode(b64))
     (p / "security_engine.py").write_bytes(data)
     print("Assembled security_engine.py from local chunks", len(data), file=sys.stderr)
-# Fail build if still broken
+# Fail build if still broken / stub-only
 se = (p / "security_engine.py").read_text()
 if se.strip() in ("test", "") or "class SecurityEngine" not in se:
     raise SystemExit("security_engine.py invalid after assemble")
-print("security_engine.py OK", file=sys.stderr)
+if len(se) < 5000 or "Perimeter" not in se:
+    raise SystemExit("security_engine.py looks like stub – assemble from chunks failed")
+print("security_engine.py OK", len(se), "bytes", file=sys.stderr)
 PY
 
 RUN chmod a+x /run.sh \
@@ -68,5 +70,5 @@ LABEL \
     io.hass.name="FritzBox Network Guard" \
     io.hass.description="Network scanner + FritzBox isolation + SecurityEngine" \
     io.hass.type="addon" \
-    io.hass.version="1.5.3" \
+    io.hass.version="1.5.4" \
     org.opencontainers.image.source="https://github.com/Qlimuli/ha-fritzbox-network-guard"
