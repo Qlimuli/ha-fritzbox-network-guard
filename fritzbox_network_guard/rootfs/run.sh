@@ -1,5 +1,5 @@
 #!/usr/bin/with-contenv bashio
-bashio::log.info "Starting FritzBox Network Guard 2.0.1..."
+bashio::log.info "Starting FritzBox Network Guard 2.1.0..."
 
 export FRITZBOX_HOST=$(bashio::config 'fritzbox_host')
 export FRITZBOX_USER=$(bashio::config 'fritzbox_user')
@@ -14,6 +14,8 @@ export PERIMETER_INTERVAL=$(bashio::config 'perimeter_interval')
 export ENABLE_THREAT_INTEL=$(bashio::config 'enable_threat_intel')
 export THREAT_INTEL_INTERVAL=$(bashio::config 'threat_intel_interval')
 export AUTO_BLOCK_THREAT_INTEL=$(bashio::config 'auto_block_threat_intel')
+export DEEP_SCAN_ON_NEW=$(bashio::config 'deep_scan_on_new')
+export LOG_ALERT_NOTIFY=$(bashio::config 'log_alert_notify')
 export SUPERVISOR_TOKEN="${SUPERVISOR_TOKEN}"
 export DATA_DIR="/data"
 mkdir -p "${DATA_DIR}"
@@ -21,7 +23,7 @@ mkdir -p "${DATA_DIR}"
 bashio::log.info "FritzBox host: ${FRITZBOX_HOST}"
 bashio::log.info "Scan interval: ${SCAN_INTERVAL}s | Network: ${NETWORK_CIDR}"
 if [ -z "${FRITZBOX_PASSWORD}" ]; then
-  bashio::log.warning "fritzbox_password is empty – WAN blocks will fail (401)"
+  bashio::log.warning "fritzbox_password is empty – WAN blocks / logs may fail (401)"
 fi
 
 APP_HOME="/opt/network-guard"
@@ -35,6 +37,7 @@ python3 - <<'PY' || true
 from pathlib import Path
 import base64, gzip, sys
 p = Path("/opt/network-guard")
+
 def assemble(pattern, dest_name):
     chunks = sorted(p.glob(pattern))
     if not chunks:
@@ -46,6 +49,7 @@ def assemble(pattern, dest_name):
         print(f"Assembled {dest_name} from {len(chunks)} chunks ({len(data)} bytes)", file=sys.stderr)
     except Exception as exc:
         print(f"{dest_name} assemble failed: {exc}", file=sys.stderr)
+
 assemble("ui.b64.*", "ui.html")
 assemble("security_engine.b64.*", "security_engine.py")
 PY

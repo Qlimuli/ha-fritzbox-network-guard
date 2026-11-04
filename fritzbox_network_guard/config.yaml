@@ -1,9 +1,9 @@
 name: "FritzBox Network Guard"
-version: "2.0.1"
+version: "2.1.0"
 slug: fritzbox_network_guard
 description: >-
-  LAN-Scan, MAC-Quarantäne, WAN-Sperre über FritzBox TR-064,
-  Schutz vor Auto-Sperren inaktiver Geräte.
+  LAN-Scan, FritzBox-Logs, Perimeter/Threat-Intel, Deep-Scan, WAN-Sperre
+  über TR-064 – nur aktive Geräte werden auto-behandelt.
 arch:
   - aarch64
   - amd64
@@ -36,6 +36,8 @@ options:
   enable_threat_intel: true
   threat_intel_interval: 21600
   auto_block_threat_intel: true
+  deep_scan_on_new: false
+  log_alert_notify: true
 schema:
   fritzbox_host: str
   fritzbox_user: str
@@ -50,6 +52,8 @@ schema:
   enable_threat_intel: bool
   threat_intel_interval: int(3600,86400)
   auto_block_threat_intel: bool
+  deep_scan_on_new: bool
+  log_alert_notify: bool
 homeassistant_api: true
 hassio_api: true
 ingress: true

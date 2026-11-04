@@ -26,7 +26,9 @@ COPY rootfs/app/ ${APP_HOME}/
 RUN chmod a+x /run.sh \
     && test -f ${APP_HOME}/main.py \
     && test -f ${APP_HOME}/main_full.b64.00 \
-    && ls -la ${APP_HOME}/ | head -40
+    && test -f ${APP_HOME}/fritz_insights.py \
+    && python3 -m py_compile ${APP_HOME}/fritz_insights.py \
+    && ls -la ${APP_HOME}/ | head -50
 
 WORKDIR ${APP_HOME}
 
@@ -34,7 +36,7 @@ CMD [ "/run.sh" ]
 
 LABEL \
     io.hass.name="FritzBox Network Guard" \
-    io.hass.description="Safe LAN monitor + FritzBox WAN isolation" \
+    io.hass.description="LAN monitor, Fritz logs, deep scan, WAN isolation" \
     io.hass.type="addon" \
-    io.hass.version="2.0.1" \
+    io.hass.version="2.1.0" \
     org.opencontainers.image.source="https://github.com/Qlimuli/ha-fritzbox-network-guard"
