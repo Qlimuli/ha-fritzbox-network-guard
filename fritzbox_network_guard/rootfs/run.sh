@@ -1,9 +1,6 @@
 #!/usr/bin/with-contenv bashio
-# ==============================================================================
-# FritzBox Network Guard add-on 1.4.1
-# ==============================================================================
-
-bashio::log.info "Starting FritzBox Network Guard 1.4.1..."
+# FritzBox Network Guard 1.5.2
+bashio::log.info "Starting FritzBox Network Guard 1.5.2..."
 
 export FRITZBOX_HOST=$(bashio::config 'fritzbox_host')
 export FRITZBOX_USER=$(bashio::config 'fritzbox_user')
@@ -19,30 +16,37 @@ export ENABLE_THREAT_INTEL=$(bashio::config 'enable_threat_intel')
 export THREAT_INTEL_INTERVAL=$(bashio::config 'threat_intel_interval')
 export AUTO_BLOCK_THREAT_INTEL=$(bashio::config 'auto_block_threat_intel')
 export SUPERVISOR_TOKEN="${SUPERVISOR_TOKEN}"
-
 export DATA_DIR="/data"
 mkdir -p "${DATA_DIR}"
 
 bashio::log.info "FritzBox host: ${FRITZBOX_HOST}"
 bashio::log.info "Scan interval: ${SCAN_INTERVAL}s"
 bashio::log.info "Network: ${NETWORK_CIDR}"
+if [ -z "${FRITZBOX_PASSWORD}" ]; then
+  bashio::log.warning "fritzbox_password is empty – WAN blocks will fail (401)"
+fi
 
 APP_HOME="/opt/network-guard"
 
-# Assemble ui.html from gzip+b64 chunks if present
 python3 - <<'PY'
 from pathlib import Path
 import base64, gzip, sys
 p = Path("/opt/network-guard")
-chunks = sorted(p.glob("ui.b64.*"))
-if chunks:
+
+def assemble(pattern, dest_name):
+    chunks = sorted(p.glob(pattern))
+    if not chunks:
+        return
     try:
         b64 = "".join(c.read_text().strip() for c in chunks)
         data = gzip.decompress(base64.b64decode(b64))
-        (p / "ui.html").write_bytes(data)
-        print(f"Assembled ui.html from {len(chunks)} chunks ({len(data)} bytes)", file=sys.stderr)
+        (p / dest_name).write_bytes(data)
+        print(f"Assembled {dest_name} from {len(chunks)} chunks ({len(data)} bytes)", file=sys.stderr)
     except Exception as exc:
-        print(f"ui assemble failed (using bundled ui.html): {exc}", file=sys.stderr)
+        print(f"{dest_name} assemble failed: {exc}", file=sys.stderr)
+
+assemble("ui.b64.*", "ui.html")
+assemble("security_engine.b64.*", "security_engine.py")
 PY
 
 if [ ! -f "${APP_HOME}/main.py" ]; then
