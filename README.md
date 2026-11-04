@@ -7,7 +7,8 @@ Blocked devices can be **unlocked again** in the add-on GUI.
 ## Features
 
 - Periodic network scan (nmap)
-- Auto-block of **new unknown devices** (configurable)
+- Auto-block of **new unknown devices** (configurable; only while actively connected)
+- Only **actively connected** devices are blocked or treated as threats (inactive Fritz history is ignored)
 - Block by **critical MAC prefixes** (e.g. known IoT / camera OUIs)
 - FritzBox integration via TR-064 (`DisallowWANAccessByIP`)
 - Clean dark Web UI (Ingress) to list & unblock devices
