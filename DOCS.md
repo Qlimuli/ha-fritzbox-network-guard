@@ -1,45 +1,42 @@
-# FritzBox Network Guard – Documentation
+# FritzBox Network Guard – Dokumentation
 
-## Overview
+## Überblick
 
-This add-on continuously scans the configured local network and reacts to security-relevant events by placing the offending IP on the FritzBox parental-control / HostFilter blacklist. The device loses WAN (internet) access while remaining reachable inside the LAN for further investigation.
+Das Add-on überwacht das LAN, bewertet Geräte mit einem transparenten Risiko-Score und kann den **Internetzugang (WAN)** einzelner Geräte über die FritzBox sperren. Die LAN-Kommunikation bleibt möglich.
 
-## Blocking mechanism
+**Standardmodus ist `learning`:** Es wird nur gelernt und benachrichtigt, nicht automatisch gesperrt.
 
-The add-on calls the TR-064 service exposed by modern Fritz!OS:
+## Modi
 
-```
-Service : X_AVM-DE_HostFilter1
-Action  : DisallowWANAccessByIP
-Arguments:
-  NewIPv4Address = <ip>
-  NewDisallow    = true | false
-```
+| Modus | Auto-Sperre | Manuelle Sperre |
+|-------|-------------|-----------------|
+| `learning` | nein (Baseline) | ja (außer geschützte Geräte) |
+| `monitor` | nein | ja |
+| `enforce` | ja (Regeln + Schwellwerte) | ja |
 
-This is the same mechanism that the FritzBox web interface uses under  
-**Internet → Filters → Parental Controls → Device Block**.
+## Schutz vor Selbst-Aussperrung
 
-## Web UI
+Niemals gesperrt werden: Whitelist, HA-Host, Gateway, FritzBox-Adresse.
 
-Available via Home Assistant Ingress (side panel) or directly on port 8099.
+**Schutzschalter**, wenn die Geräteliste leer ist, stark schrumpft, die FritzBox unerreichbar ist oder mehr als `max_blocks_per_cycle` Sperren anstehen.
 
-- List of currently blocked devices
-- One-click unblock
-- Manual IP block
-- Overview of last-seen devices from the scanner
+Zufällige/Privacy-MACs (LAA-Bit) werden **nicht** auto-gesperrt.
 
-## API endpoints
+## FritzBox-Benutzer
 
-| Method | Path | Description |
-|--------|------|-------------|
-| GET | `/api/blocked` | JSON list of blocked devices |
-| GET | `/api/known` | JSON list of known devices |
-| POST | `/api/block` | Body `{"ip":"…","reason":"…"}` |
-| POST | `/api/unblock` | Body `{"ip":"…"}` |
-| GET | `/api/status` | Current configuration summary |
+Eigener Benutzer nur mit **Berechtigung für Anwendungen**, ohne Fernzugriff. Bei Auth-Fehlern: exponentielles Backoff.
 
-## Tips
+## TLS
 
-- Start with `auto_block_new_devices: false` and only enable it after you have a stable known-device baseline.
-- Critical infrastructure (HA host, your main PC, NAS) should never be auto-blocked.
-- You can combine the add-on with Home Assistant device_tracker entities for richer logic via automations.
+- `fritzbox_use_https: true` → Port **49443**
+- `fritzbox_verify_tls: false` Standard (selbstsigniert)
+
+## API
+
+Nur über **Ingress**. Optional `api_token`. CSRF für UI-Mutationen (`GET /api/csrf`).
+
+## Daten
+
+- `/data/state.json` – atomar
+- `/data/audit.jsonl` – Audit mit Rotation
+- Start: Abgleich mit `GetWANAccessByIP`

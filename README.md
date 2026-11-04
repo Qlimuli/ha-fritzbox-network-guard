@@ -1,77 +1,59 @@
 # FritzBox Network Guard – Home Assistant Add-on
 
-Scans the local network for critical / suspicious devices.  
-On a security alert the IP is added to the **FritzBox blacklist** (WAN access is blocked via `X_AVM-DE_HostFilter`).  
-Blocked devices can be **unlocked again** in the add-on GUI.
+Safe LAN monitoring with **learning / monitor / enforce** modes.  
+WAN isolation via documented AVM TR-064 `X_AVM-DE_HostFilter1` → `DisallowWANAccessByIP`.  
+Designed so you **cannot lock yourself out** of your own network.
 
-## Features
+## Safety (v2.0)
 
-- Periodic network scan (nmap)
-- Auto-block of **new unknown devices** (configurable; only while actively connected)
-- Only **actively connected** devices are blocked or treated as threats (inactive Fritz history is ignored)
-- Block by **critical MAC prefixes** (e.g. known IoT / camera OUIs)
-- FritzBox integration via TR-064 (`DisallowWANAccessByIP`)
-- Clean dark Web UI (Ingress) to list & unblock devices
-- Optional Home Assistant persistent notifications
-- Manual block / unblock
+| Feature | Behavior |
+|---------|----------|
+| Default mode | `learning` – record baseline, notify only |
+| Protected | Whitelist, HA host, gateway, Fritz, add-on IPs – **never** blocked |
+| Circuit breaker | Skips auto-block if host list empty/shrinks >50%, Fritz down, or too many blocks |
+| Identity | MAC-primary; re-applies block when DHCP changes IP |
+| Randomized MAC | LAA bit detected – never auto-blocked |
+| Dry-run | Log-only blocks |
+| API | Ingress only (no host port); optional `api_token` |
 
 ## Requirements
 
-- AVM FRITZ!Box with TR-064 enabled  
-  (*Permit access for applications* must be on)
-- User account on the FritzBox with sufficient rights
-- Home Assistant OS / Supervised (for add-on support)
+- FRITZ!Box with TR-064 enabled (*Permit access for applications*)
+- Dedicated Fritz user with **app rights only** (no remote access recommended)
+- Home Assistant OS / Supervised
 
 ## Installation
 
-1. Add this repository to the Home Assistant Add-on Store  
-   (or clone / copy the folder into `/addons`)
-2. Install **FritzBox Network Guard**
-3. Configure:
-   - FritzBox host (usually `fritz.box` or `192.168.178.1`)
-   - Username & password
-   - Network CIDR (e.g. `192.168.178.0/24`)
-   - Scan interval
-   - Optional: comma-separated critical MAC prefixes (`AA:BB:CC,DD:EE:FF`)
-4. Start the add-on
-5. Open the Web UI via the side panel or Ingress
+1. Add this repository to the HA Add-on Store  
+2. Install **FritzBox Network Guard**  
+3. Configure host, user, password; leave `mode: learning` for at least `learning_days`  
+4. Start → open Ingress UI  
 
-## How isolation works
+## TR-064 actions used (AVM documented)
 
-The add-on uses the official TR-064 action:
+- `DisallowWANAccessByIP` / `GetWANAccessByIP` on `X_AVM-DE_HostFilter1`
+- `GetHostNumberOfEntries` / `GetGenericHostEntry` / `X_AVM-DE_GetHostListPath` on `Hosts1`
+- `GetGenericPortMappingEntry` on WAN IP/PPP connection services
 
-```text
-X_AVM-DE_HostFilter1 → DisallowWANAccessByIP
-```
+## Configuration (selected)
 
-This **blocks internet (WAN) access** for the device while it can still communicate inside the LAN.  
-Full Layer-2 isolation is not exposed by the standard FritzBox API; WAN blocking is the supported and reliable method.
+| Option | Default | Notes |
+|--------|---------|--------|
+| `mode` | `learning` | `learning` / `monitor` / `enforce` |
+| `learning_days` | `7` | Baseline period |
+| `dry_run` | `false` | Simulate blocks |
+| `max_blocks_per_cycle` | `3` | Circuit breaker |
+| `fritzbox_use_https` | `true` | Port 49443 |
+| `fritzbox_verify_tls` | `false` | Self-signed certs |
+| `api_token` | empty | Non-Ingress API access |
+| `auto_block_new_devices` | `false` | Only in `enforce` |
 
-## Unblocking
-
-In the add-on UI simply click **Entsperren** next to any blocked device.  
-The same action can be triggered via the REST API:
+## Development
 
 ```bash
-curl -X POST http://<addon>:8099/api/unblock -d '{"ip":"192.168.178.50"}'
+python3 tests/test_policy.py
+python3 tests/test_state.py
 ```
-
-## Configuration options
-
-| Option | Description | Default |
-|--------|-------------|---------|
-| `fritzbox_host` | Hostname / IP of the FritzBox | `fritz.box` |
-| `fritzbox_user` | FritzBox user | – |
-| `fritzbox_password` | Password | – |
-| `scan_interval` | Seconds between scans | `60` |
-| `network_cidr` | Network to scan | `192.168.178.0/24` |
-| `critical_mac_prefixes` | Comma-separated OUI prefixes that trigger a block | empty |
-| `auto_block_new_devices` | Automatically block devices never seen before | `true` |
-| `notify_on_block` | Create HA persistent notification | `true` |
-
-## Disclaimer
-
-Use at your own risk. Always whitelist critical devices (Home Assistant, your own clients) if you enable auto-block of new devices.
 
 ## License
 
