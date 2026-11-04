@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.5.5
+- Only actively connected devices are auto-blocked / threat-detected (inactive Fritz history entries are ignored for blocking and MAC-conflict checks). Offline devices cannot pose an active threat.
+
 ## 1.3.1
 - Repository structure fixed for Home Assistant Add-on Store (addon in subdirectory)
 - Version bump so Supervisor detects the update
