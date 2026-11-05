@@ -1,11 +1,10 @@
 name: "FritzBox Network Guard"
-version: "1.3.4"
+version: "2.2.1"
 slug: fritzbox_network_guard
 description: >-
-  LAN-Scan, MAC-Quarantäne, Perimeter-Portscan der öffentlichen IP,
-  Threat-Intelligence (FireHOL/Spamhaus), IDS-Webhooks (Suricata/Wazuh).
-  Bei Alarmen: WAN-Sperre auf der FritzBox + optional MAC-Filter.
-  Entsperren über die Add-on-GUI.
+  LAN-Scan, FritzBox Packet-Capture (Wireshark-kompatibel), Traffic-Analyse &
+  Visualisierung, Logs, Perimeter/Threat-Intel, WAN-Sperre über TR-064.
+  Companion zu FRITZ!Portal.
 arch:
   - aarch64
   - amd64
@@ -18,7 +17,7 @@ host_network: true
 ports:
   8099/tcp: 8099
 ports_description:
-  8099/tcp: Web UI for blocked devices & controls
+  8099/tcp: Web UI
 map:
   - type: share
     read_only: false
@@ -33,6 +32,13 @@ options:
   critical_mac_prefixes: ""
   auto_block_new_devices: false
   notify_on_block: true
+  enable_perimeter_scan: true
+  perimeter_interval: 3600
+  enable_threat_intel: true
+  threat_intel_interval: 21600
+  auto_block_threat_intel: true
+  deep_scan_on_new: false
+  log_alert_notify: true
 schema:
   fritzbox_host: str
   fritzbox_user: str
@@ -42,6 +48,13 @@ schema:
   critical_mac_prefixes: str?
   auto_block_new_devices: bool
   notify_on_block: bool
+  enable_perimeter_scan: bool
+  perimeter_interval: int(300,86400)
+  enable_threat_intel: bool
+  threat_intel_interval: int(3600,86400)
+  auto_block_threat_intel: bool
+  deep_scan_on_new: bool
+  log_alert_notify: bool
 homeassistant_api: true
 hassio_api: true
 ingress: true

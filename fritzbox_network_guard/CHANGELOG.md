@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.2.1 – HA Store visibility + capture stack
+- Version bump so Home Assistant Supervisor picks up the update
+- Packet capture API with web SID login (`login_sid.lua`)
+- `/api/capture/*` routes (start/stop/list/analyze/download)
+- `packet_capture.py` + tshark in image
+- Host-side Wireshark Extcap under `extcap/`
+- Companion note: FRITZ!Portal
+
 ## 2.2.0 – Packet Capture & Traffic Analysis
 - **Wireshark-compatible packet capture** via FritzBox hidden capture endpoint (`/cgi-bin/capture_notimeout`)
 - New module `packet_capture.py`: start/stop capture on selectable interfaces (LAN, WAN, WLAN, physical ports)

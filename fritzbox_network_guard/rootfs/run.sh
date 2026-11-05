@@ -1,5 +1,5 @@
 #!/usr/bin/with-contenv bashio
-bashio::log.info "Starting FritzBox Network Guard 2.2.0..."
+bashio::log.info "Starting FritzBox Network Guard 2.2.1..."
 
 export FRITZBOX_HOST=$(bashio::config 'fritzbox_host')
 export FRITZBOX_USER=$(bashio::config 'fritzbox_user')
@@ -47,8 +47,8 @@ def assemble(pattern, dest_name):
         data = gzip.decompress(base64.b64decode(b64))
         (p / dest_name).write_bytes(data)
         print(f"Assembled {dest_name} from {len(chunks)} chunks ({len(data)} bytes)", file=sys.stderr)
-    except Exception as exc:
-        print(f"{dest_name} assemble failed: {exc}", file=sys.stderr)
+    except Exception as exp:
+        print(f"{dest_name} assemble failed: {exp}", file=sys.stderr)
 
 assemble("ui.b64.*", "ui.html")
 assemble("security_engine.b64.*", "security_engine.py")
