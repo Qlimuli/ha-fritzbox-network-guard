@@ -1,5 +1,5 @@
 #!/usr/bin/with-contenv bashio
-bashio::log.info "Starting FritzBox Network Guard 2.2.1..."
+bashio::log.info "Starting FritzBox Network Guard 2.2.2..."
 
 export FRITZBOX_HOST=$(bashio::config 'fritzbox_host')
 export FRITZBOX_USER=$(bashio::config 'fritzbox_user')
@@ -44,6 +44,9 @@ def assemble(pattern, dest_name):
         return
     try:
         b64 = "".join(c.read_text().strip() for c in chunks)
+        pad = (-len(b64)) % 4
+        if pad:
+            b64 += "=" * pad
         data = gzip.decompress(base64.b64decode(b64))
         (p / dest_name).write_bytes(data)
         print(f"Assembled {dest_name} from {len(chunks)} chunks ({len(data)} bytes)", file=sys.stderr)
