@@ -49,29 +49,13 @@ def _patch_safety(code: str) -> str:
     if old in code:
         code = code.replace(old, new, 1)
         print("Patched: auto-block only for active devices", file=sys.stderr)
-    old2 = (
-        "                sec.detect_ip_mac_conflict(device_list)\n"
-        "                for d in device_list:\n"
-        "                    if d.get(\"active\"):\n"
-        "                        sec.observe_device(d)"
-    )
-    new2 = (
-        "                active_list = [d for d in device_list if d.get(\"active\")]\n"
-        "                sec.detect_ip_mac_conflict(active_list)\n"
-        "                for d in active_list:\n"
-        "                    sec.observe_device(d)"
-    )
-    if old2 in code:
-        code = code.replace(old2, new2, 1)
-        print("Patched: MAC-conflict only on active devices", file=sys.stderr)
     return code
 
 
 def _patch_features(code: str) -> str:
-    """Inject deep-scan API and richer nmap if not present."""
-    if "/api/security/deep-scan" in code:
-        return code
-    injection = '''
+    """Inject deep-scan, config, and packet-capture APIs."""
+    if "/api/security/deep-scan" not in code:
+        injection = '''
 
 @app.route("/api/security/deep-scan", methods=["POST"])
 def api_deep_scan():
@@ -110,20 +94,111 @@ def api_config_effective():
         "critical_mac_prefixes": CRITICAL_MAC_PREFIXES,
         "deep_scan_on_new": os.getenv("DEEP_SCAN_ON_NEW", "false").lower() in ("true", "1", "yes"),
         "log_alert_notify": os.getenv("LOG_ALERT_NOTIFY", "true").lower() in ("true", "1", "yes"),
-        "version": "2.1.0",
+        "version": "2.2.0",
     })
 
 '''
-    marker = '\nif __name__ == "__main__":'
-    if marker in code:
-        code = code.replace(marker, injection + marker, 1)
-        print("Patched: deep-scan + config/effective API", file=sys.stderr)
-    else:
-        code = code + injection
-        print("Patched: appended deep-scan API", file=sys.stderr)
-    code = code.replace('"version": "1.5.0"', '"version": "2.1.0"')
-    code = code.replace('"version": "1.4.0"', '"version": "2.1.0"')
-    code = code.replace("Network Guard 1.4.0", "Network Guard 2.1.0")
+        marker = '\nif __name__ == "__main__":'
+        if marker in code:
+            code = code.replace(marker, injection + marker, 1)
+            print("Patched: deep-scan + config/effective API", file=sys.stderr)
+        else:
+            code = code + injection
+            print("Patched: appended deep-scan API", file=sys.stderr)
+
+    if "/api/capture/status" not in code:
+        capture_injection = '''
+
+# --- Packet Capture (Wireshark-compatible FritzBox capture) ---
+_packet_cap = None
+
+def get_packet_capture():
+    global _packet_cap
+    if _packet_cap is None:
+        from packet_capture import PacketCapture
+        _packet_cap = PacketCapture(
+            host=FRITZBOX_HOST,
+            password=FRITZBOX_PASSWORD,
+            user=FRITZBOX_USER,
+        )
+    return _packet_cap
+
+
+@app.route("/api/capture/status")
+def api_capture_status():
+    return jsonify(get_packet_capture().status())
+
+
+@app.route("/api/capture/interfaces")
+def api_capture_interfaces():
+    return jsonify({"interfaces": get_packet_capture().list_interfaces()})
+
+
+@app.route("/api/capture/start", methods=["POST"])
+def api_capture_start():
+    data = request.get_json(force=True, silent=True) or {}
+    iface = (data.get("iface") or data.get("interface") or "1-lan").strip()
+    duration = int(data.get("duration_sec") or data.get("duration") or 0)
+    snaplen = int(data.get("snaplen") or 0)
+    result = get_packet_capture().start(iface=iface, snaplen=snaplen, duration_sec=duration)
+    status = 200 if result.get("ok") else 400
+    return jsonify(result), status
+
+
+@app.route("/api/capture/stop", methods=["POST"])
+def api_capture_stop():
+    return jsonify(get_packet_capture().stop())
+
+
+@app.route("/api/capture/list")
+def api_capture_list():
+    return jsonify({"captures": get_packet_capture().list_captures()})
+
+
+@app.route("/api/capture/delete", methods=["POST"])
+def api_capture_delete():
+    data = request.get_json(force=True, silent=True) or {}
+    name = (data.get("name") or "").strip()
+    if not name:
+        return jsonify({"ok": False, "message": "name required"}), 400
+    return jsonify(get_packet_capture().delete_capture(name))
+
+
+@app.route("/api/capture/analyze", methods=["POST"])
+def api_capture_analyze():
+    data = request.get_json(force=True, silent=True) or {}
+    name = (data.get("name") or "").strip()
+    if not name:
+        return jsonify({"ok": False, "message": "name required"}), 400
+    limit = int(data.get("limit") or 50)
+    return jsonify(get_packet_capture().analyze(name, limit=limit))
+
+
+@app.route("/api/capture/download/<path:name>")
+def api_capture_download(name: str):
+    from flask import send_file
+    p = get_packet_capture().capture_path(name)
+    if not p:
+        return jsonify({"ok": False, "message": "not found"}), 404
+    return send_file(p, as_attachment=True, download_name=p.name, mimetype="application/vnd.tcpdump.pcap")
+
+'''
+        marker = '\nif __name__ == "__main__":'
+        if marker in code:
+            code = code.replace(marker, capture_injection + marker, 1)
+            print("Patched: packet capture API routes", file=sys.stderr)
+        else:
+            code = code + capture_injection
+            print("Patched: appended packet capture API", file=sys.stderr)
+
+    for old_v, new_v in [
+        ('"version": "1.5.0"', '"version": "2.2.0"'),
+        ('"version": "1.4.0"', '"version": "2.2.0"'),
+        ('"version": "2.1.0"', '"version": "2.2.0"'),
+        ("Network Guard 1.4.0", "Network Guard 2.2.0"),
+        ("Network Guard 2.1.0", "Network Guard 2.2.0"),
+    ]:
+        code = code.replace(old_v, new_v)
     return code
 
 
