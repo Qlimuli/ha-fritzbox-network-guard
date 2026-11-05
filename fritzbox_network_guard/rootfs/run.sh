@@ -33,12 +33,18 @@ if [ ! -f "${APP_HOME}/main.py" ]; then
   exit 1
 fi
 
+# Assemble full GUI from plain HTML fragments (reliable, no b64)
+if ls "${APP_HOME}/ui_parts"/*.html >/dev/null 2>&1; then
+  cat $(ls "${APP_HOME}/ui_parts"/*.html | sort) > "${APP_HOME}/ui.html"
+  bashio::log.info "Assembled UI from ui_parts ($(wc -c < "${APP_HOME}/ui.html") bytes)"
+fi
+
 python3 - <<'PY' || true
 from pathlib import Path
 import base64, gzip, sys
 p = Path("/opt/network-guard")
 
-def assemble_pattern(pattern, dest_name):
+def assemble(pattern, dest_name):
     chunks = sorted(p.glob(pattern))
     if not chunks:
         return False
@@ -55,18 +61,12 @@ def assemble_pattern(pattern, dest_name):
         print(f"{dest_name} assemble failed: {exp}", file=sys.stderr)
         return False
 
-# Prefer complete full-GUI payload, then ui.b64.*, then bundled ui.html
-ok = assemble_pattern("ui_full.gz.b64.*", "ui.html")
-if not ok:
-    ok = assemble_pattern("ui.b64.*", "ui.html")
-if not ok:
-    ui = p / "ui.html"
-    if ui.exists():
-        print(f"Using bundled ui.html ({ui.stat().st_size} bytes)", file=sys.stderr)
-    else:
-        print("WARNING: no UI available", file=sys.stderr)
+# Only use b64 UI if no ui_parts assembled file exists / empty
+ui = p / "ui.html"
+if not ui.exists() or ui.stat().st_size < 5000:
+    assemble("ui_full.gz.b64.*", "ui.html") or assemble("ui.b64.*", "ui.html")
 
-assemble_pattern("security_engine.b64.*", "security_engine.py")
+assemble("security_engine.b64.*", "security_engine.py")
 PY
 
 cd "${APP_HOME}"
