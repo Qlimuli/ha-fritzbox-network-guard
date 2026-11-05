@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
 <meta name="theme-color" content="#0b1220">
+<meta name="mobile-web-app-capable" content="yes">
 <title>FritzBox Network Guard</title>
 <style>
 :root{
@@ -20,18 +21,18 @@ body{
   font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,sans-serif;
   background:var(--bg);color:var(--text);line-height:1.45;
   min-height:100%;min-height:100dvh;
-  padding-bottom:calc(4.8rem + var(--safe-bottom));
+  padding-bottom:calc(5.2rem + var(--safe-bottom));
 }
 header{
   display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;
-  gap:.75rem;padding:calc(.9rem + var(--safe-top)) 1rem .9rem;
+  gap:.75rem;padding:calc(.85rem + var(--safe-top)) 1rem .85rem;
   border-bottom:1px solid var(--border);
   background:linear-gradient(180deg,#121a2b,var(--bg));
   position:sticky;top:0;z-index:20;
 }
-header h1{font-size:1.15rem;font-weight:700;display:flex;align-items:center;gap:.45rem}
-header .sub{color:var(--muted);font-size:.8rem;margin-top:.15rem}
-.badge{font-size:.7rem;padding:.25rem .55rem;border-radius:999px;font-weight:600;white-space:nowrap}
+header h1{font-size:1.1rem;font-weight:700;display:flex;align-items:center;gap:.4rem}
+header .sub{color:var(--muted);font-size:.78rem;margin-top:.1rem}
+.badge{font-size:.68rem;padding:.22rem .5rem;border-radius:999px;font-weight:600;white-space:nowrap}
 .badge-ok{background:#14532d;color:#86efac}
 .badge-warn{background:#78350f;color:#fcd34d}
 .badge-danger{background:#7f1d1d;color:#fca5a5}
@@ -39,18 +40,122 @@ header .sub{color:var(--muted);font-size:.8rem;margin-top:.15rem}
 .badge-crit{background:#4c1d95;color:#e9d5ff}
 .badge-accent{background:#0c4a6e;color:#7dd3fc}
 
-.tabs-desktop{display:none;gap:.35rem;padding:.5rem 1rem;border-bottom:1px solid var(--border);overflow-x:auto}
-.tab{padding:.45rem .8rem;border-radius:8px;cursor:pointer;font-size:.8rem;font-weight:600;color:var(--muted);white-space:nowrap}
+.tabs-desktop{display:none;gap:.3rem;padding:.45rem 1rem;border-bottom:1px solid var(--border);overflow-x:auto}
+.tab{padding:.42rem .75rem;border-radius:8px;cursor:pointer;font-size:.78rem;font-weight:600;color:var(--muted);white-space:nowrap}
 .tab.active{background:var(--card);color:var(--accent)}
 .tab:hover{color:var(--text)}
 
 .bottom-nav{
   position:fixed;bottom:0;left:0;right:0;z-index:30;
   display:flex;background:#0f172a;border-top:1px solid var(--border);
-  padding:0.25rem 0 calc(0.25rem + var(--safe-bottom));
+  padding:0.2rem 0 calc(0.2rem + var(--safe-bottom));
   overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;
 }
 .bottom-nav::-webkit-scrollbar{display:none}
 .nav-item{
-  flex:1 0 auto;min-width:4rem;display:flex;flex-direction:column;align-items:center;
-  gap
+  flex:1 0 auto;min-width:3.8rem;display:flex;flex-direction:column;align-items:center;
+  gap:.1rem;padding:.35rem .25rem;color:var(--muted);font-size:.6rem;font-weight:600;
+  cursor:pointer;border:none;background:transparent;
+}
+.nav-item.active{color:var(--accent)}
+.nav-item .ico{font-size:1.1rem;line-height:1}
+
+main{padding:1rem;max-width:1100px;margin:0 auto}
+.panel{display:none}
+.panel.active{display:block}
+.card{
+  background:var(--card);border:1px solid var(--border);border-radius:var(--radius);
+  padding:1rem;margin-bottom:1rem;
+}
+.card h2{font-size:.95rem;font-weight:700;margin-bottom:.75rem;display:flex;align-items:center;gap:.4rem}
+.card h3{font-size:.88rem;font-weight:600;margin-bottom:.5rem;color:var(--muted)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:.75rem}
+.stat{
+  background:var(--panel);border:1px solid var(--border);border-radius:10px;
+  padding:.75rem;text-align:center;
+}
+.stat .val{font-size:1.45rem;font-weight:700;color:var(--accent)}
+.stat .lbl{font-size:.7rem;color:var(--muted);margin-top:.2rem}
+.row{display:flex;flex-wrap:wrap;gap:.5rem;align-items:center}
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:.3rem;
+  padding:.5rem .85rem;border-radius:8px;border:1px solid var(--border);
+  background:var(--panel);color:var(--text);font-size:.8rem;font-weight:600;
+  cursor:pointer;min-height:var(--touch);
+}
+.btn:hover{border-color:var(--accent);color:var(--accent)}
+.btn-accent{background:#0c4a6e;border-color:#0369a1;color:#7dd3fc}
+.btn-danger{background:#7f1d1d;border-color:#b91c1c;color:#fca5a5}
+.btn-ok{background:#14532d;border-color:#166534;color:#86efac}
+.btn-sm{padding:.3rem .55rem;min-height:auto;font-size:.72rem}
+input,select,textarea{
+  background:var(--panel);border:1px solid var(--border);border-radius:8px;
+  color:var(--text);padding:.5rem .7rem;font-size:.85rem;min-height:var(--touch);
+}
+input:focus,select:focus{outline:none;border-color:var(--accent)}
+.pre{
+  background:var(--panel);border:1px solid var(--border);border-radius:8px;
+  padding:.75rem;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+  font-size:.72rem;overflow:auto;max-height:320px;white-space:pre-wrap;word-break:break-all;
+}
+.empty{color:var(--muted);font-size:.85rem;padding:1rem 0;text-align:center}
+.muted{color:var(--muted);font-size:.8rem}
+.device-card,.event-row,.log-row{
+  background:var(--panel);border:1px solid var(--border);border-radius:10px;
+  padding:.75rem;margin-bottom:.5rem;
+}
+.device-card .top{display:flex;justify-content:space-between;align-items:flex-start;gap:.5rem}
+.device-card .name{font-weight:600;font-size:.9rem}
+.device-card .meta{font-size:.75rem;color:var(--muted);margin-top:.25rem}
+.device-card .actions{display:flex;flex-wrap:wrap;gap:.35rem;margin-top:.55rem}
+.toast{
+  position:fixed;top:calc(1rem + var(--safe-top));left:50%;transform:translateX(-50%);
+  background:#1e293b;color:var(--text);padding:.6rem 1.1rem;border-radius:999px;
+  font-size:.8rem;font-weight:600;z-index:100;box-shadow:0 4px 20px rgba(0,0,0,.4);
+  opacity:0;transition:opacity .25s;pointer-events:none;
+}
+.toast.show{opacity:1}
+table{width:100%;border-collapse:collapse;font-size:.8rem}
+th,td{padding:.45rem .5rem;text-align:left;border-bottom:1px solid var(--border)}
+th{color:var(--muted);font-weight:600;font-size:.72rem}
+.table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+@media(min-width:768px){
+  .tabs-desktop{display:flex}
+  .bottom-nav{display:none}
+  body{padding-bottom:1.5rem}
+  main{padding:1.25rem 1.5rem}
+}
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>🛡️ FritzBox Network Guard <span class="badge badge-accent" id="ver-badge">2.2.3</span></h1>
+    <div class="sub" id="header-sub">Laden…</div>
+  </div>
+  <div style="display:flex;gap:.35rem;flex-wrap:wrap" id="status-badges"></div>
+</header>
+
+<div class="tabs-desktop" id="tabs-desktop">
+  <div class="tab active" data-tab="overview">Übersicht</div>
+  <div class="tab" data-tab="devices">Geräte</div>
+  <div class="tab" data-tab="blocked">Gesperrt</div>
+  <div class="tab" data-tab="security">Security</div>
+  <div class="tab" data-tab="fritz">Fritz / Logs</div>
+  <div class="tab" data-tab="capture">Traffic</div>
+  <div class="tab" data-tab="whitelist">Whitelist</div>
+  <div class="tab" data-tab="config">Einstellungen</div>
+</div>
+
+<nav class="bottom-nav">
+  <button class="nav-item active" data-tab="overview"><span class="ico">📊</span>Übersicht</button>
+  <button class="nav-item" data-tab="devices"><span class="ico">💻</span>Geräte</button>
+  <button class="nav-item" data-tab="blocked"><span class="ico">🚫</span>Gesperrt</button>
+  <button class="nav-item" data-tab="security"><span class="ico">🔐</span>Security</button>
+  <button class="nav-item" data-tab="fritz"><span class="ico">📡</span>Fritz</button>
+  <button class="nav-item" data-tab="capture"><span class="ico">🧪</span>Traffic</button>
+  <button class="nav-item" data-tab="whitelist"><span class="ico">✅</span>Whitelist</button>
+  <button class="nav-item" data-tab="config"><span class="ico">⚙️</span>Config</button>
+</nav>
+
+<main>
