@@ -1,0 +1,208 @@
+
+document.addEventListener('click', async (ev) => {
+  const t = ev.target;
+  if(t.dataset?.block){ if(!confirm('WAN sperren: '+t.dataset.block+'?')) return; await api('/api/block',{method:'POST',body:{ip:t.dataset.block,reason:'manual UI'}}); toast('Gesperrt'); refreshDevices(); refreshBlocked(); }
+  if(t.dataset?.unblock){ await api('/api/unblock',{method:'POST',body:{ip:t.dataset.unblock}}); toast('Entsperrt'); refreshDevices(); refreshBlocked(); }
+  if(t.dataset?.wlIp!==undefined || t.dataset?.wlMac){ await api('/api/whitelist',{method:'POST',body:{ip:t.dataset.wlIp||'',mac:t.dataset.wlMac||''}}); toast('Whitelist aktualisiert'); refreshDevices(); refreshWhitelist(); }
+});
+
+async function refreshBlocked(){
+  const blocked = await api('/api/blocked');
+  const data = blocked.devices || blocked || {};
+  const list = Array.isArray(data) ? data : Object.entries(data).map(([k,v]) => ({ip:k, ...v}));
+  const box = $('#blocked-list');
+  if(!list.length){ box.innerHTML='<div class="empty">Keine Sperren</div>'; return; }
+  box.innerHTML = `<table><thead><tr><th>IP</th><th>Grund</th><th>Seit</th><th></th></tr></thead><tbody>
+    ${list.map(d => `<tr>
+      <td><strong>${d.ip||d.address||'?'}</strong></td>
+      <td>${d.reason||d.message||'—'}</td>
+      <td>${fmtTime(d.since||d.ts||d.blocked_at)}</td>
+      <td><button class="btn btn-sm" data-unblock="${d.ip||d.address}">Entsperren</button></td>
+    </tr>`).join('')}
+  </tbody></table>`;
+}
+$('#btn-manual-block')?.addEventListener('click', async () => {
+  const ip = $('#manual-ip').value.trim();
+  if(!ip) return;
+  await api('/api/block',{method:'POST',body:{ip,reason:'manual UI'}});
+  $('#manual-ip').value=''; toast('Gesperrt: '+ip);
+  refreshBlocked();
+});
+
+async function refreshSecurity(){
+  const sec = await api('/api/security');
+  const events = await api('/api/security/events?limit=80');
+  const openPorts = sec.perimeter_open_ports || sec.open_ports || (sec.perimeter||{}).open_ports || [];
+  $('#sec-stats').innerHTML = [
+    ['Threat-Intel', sec.threat_intel_entries ?? sec.threat_count ?? '—', ''],
+    ['Offene Ports', openPorts.length, openPorts.slice(0,5).join(', ')],
+    ['Events', (events.events||[]).length, ''],
+    ['Modus', sec.mode || '—', ''],
+  ].map(([l,v,h]) => `<div class="stat"><div class="label">${l}</div><div class="value">${v}</div><div class="hint">${h||''}</div></div>`).join('');
+  const evs = events.events || sec.recent_events || [];
+  $('#evt-count').textContent = evs.length;
+  const box = $('#sec-events');
+  if(!evs.length) box.innerHTML='<div class="empty">Keine Events</div>';
+  else box.innerHTML = evs.slice(0,60).map(e => {
+    const sev=(e.severity||e.level||'low').toLowerCase();
+    return `<div class="log-line ${sev}">${fmtTime(e.ts||e.time)} · <strong>${e.type||e.signature||'event'}</strong> · ${e.message||e.detail||[e.src_ip,e.dest_ip].filter(Boolean).join(' → ')||''}</div>`;
+  }).join('');
+}
+$('#sec-perimeter')?.addEventListener('click', async () => { toast('Perimeter…'); const r=await api('/api/security/perimeter',{method:'POST',body:{}}); toast(r.ok!==false?'OK':'Fehler'); refreshSecurity(); });
+$('#sec-threat')?.addEventListener('click', async () => { toast('Threat-Intel…'); await api('/api/security/threat-intel',{method:'POST',body:{}}); refreshSecurity(); });
+$('#sec-deep')?.addEventListener('click', async () => { toast('Deep Scan läuft…'); const r=await api('/api/security/deep-scan',{method:'POST',body:{}}); $('#deep-result').textContent=JSON.stringify(r,null,2); toast('Deep Scan fertig'); });
+$('#btn-check-ip')?.addEventListener('click', async () => {
+  const ip = $('#check-ip').value.trim();
+  if(!ip) return;
+  const r = await api('/api/security/check-ip',{method:'POST',body:{ip}});
+  const el = $('#check-ip-result'); el.style.display='block'; el.textContent=JSON.stringify(r,null,2);
+});
+
+async function refreshFritz(){
+  const sum = await api('/api/fritz/summary');
+  const s = sum.summary || sum || {};
+  $('#fz-summary').innerHTML = Object.entries(s).slice(0,8).map(([k,v]) =>
+    `<div class="stat"><div class="label">${k}</div><div class="value" style="font-size:.95rem">${typeof v==='object'?JSON.stringify(v):v}</div></div>`
+  ).join('') || '<div class="empty">Keine Summary</div>';
+}
+async function loadFz(kind){
+  if(kind==='logs' || kind==='all'){
+    const r = await api('/api/fritz/logs');
+    const logs = r.logs || r.entries || r.raw || r;
+    const box = $('#fz-logs-box');
+    if(Array.isArray(logs)){
+      box.innerHTML = logs.slice(0,80).map(l => {
+        const sev = (l.severity||l.level||'low').toLowerCase();
+        const msg = l.message||l.line||l.text||JSON.stringify(l);
+        return `<div class="log-line ${sev}">${msg}</div>`;
+      }).join('') || '<div class="empty">Keine Logs</div>';
+    } else {
+      box.innerHTML = `<pre class="pre">${typeof logs==='string'?logs:JSON.stringify(logs,null,2)}</pre>`;
+    }
+  }
+  if(kind==='wan' || kind==='all'){
+    const r = await api('/api/fritz/wan');
+    $('#fz-wan-pre').textContent = JSON.stringify(r,null,2);
+  }
+  if(kind==='ports' || kind==='all'){
+    const r = await api('/api/fritz/ports');
+    const ports = r.ports || r.mappings || r;
+    const box = $('#fz-ports-box');
+    if(Array.isArray(ports) && ports.length){
+      box.innerHTML = `<table><thead><tr><th>Ext</th><th>Int</th><th>Proto</th><th>Host</th><th>Desc</th></tr></thead><tbody>
+        ${ports.map(p=>`<tr><td>${p.NewExternalPort||p.external||p.ext||''}</td><td>${p.NewInternalPort||p.internal||p.int||''}</td><td>${p.NewProtocol||p.proto||''}</td><td>${p.NewInternalClient||p.host||''}</td><td>${p.NewPortMappingDescription||p.desc||''}</td></tr>`).join('')}
+      </tbody></table>`;
+    } else box.innerHTML = `<pre class="pre">${JSON.stringify(r,null,2)}</pre>`;
+  }
+  if(kind==='wlan' || kind==='all'){
+    const r = await api('/api/fritz/wlan');
+    $('#fz-wlan-pre').textContent = JSON.stringify(r,null,2);
+  }
+}
+$('#fz-refresh')?.addEventListener('click', async () => { toast('Fritz laden…'); await refreshFritz(); await loadFz('all'); toast('Fertig'); });
+$('#fz-logs')?.addEventListener('click', () => loadFz('logs'));
+$('#fz-wan')?.addEventListener('click', () => loadFz('wan'));
+$('#fz-ports')?.addEventListener('click', () => loadFz('ports'));
+$('#fz-wlan')?.addEventListener('click', () => loadFz('wlan'));
+
+async function refreshCapture(){
+  try{
+    const st = await api('/api/capture/status');
+    const el = $('#cap-status'); const live = $('#cap-live');
+    if(st.running){
+      el.className='badge badge-warn'; el.textContent='REC '+(st.iface||'');
+      live.textContent = `Läuft seit ${fmtTime(st.started_at)} · ${fmtBytes(st.bytes||0)} · ${st.file||''}`;
+    } else {
+      el.className = st.error ? 'badge badge-danger' : 'badge badge-muted';
+      el.textContent = st.error ? 'Fehler' : 'idle';
+      live.textContent = st.error || (st.file ? `Letzte Datei: ${st.file} (${fmtBytes(st.bytes||0)})` : '');
+    }
+    const list = await api('/api/capture/list');
+    const caps = list.captures || [];
+    const box = $('#cap-list');
+    if(!caps.length){ box.innerHTML='<div class="empty">Keine Captures</div>'; return; }
+    box.innerHTML = caps.map(c => `
+      <div class="row" style="justify-content:space-between;padding:.5rem 0;border-bottom:1px solid var(--border)">
+        <div><strong style="font-size:.85rem">${c.name}</strong>
+          <div class="muted" style="font-size:.75rem">${fmtBytes(c.size)} · ${fmtTime(c.mtime)}</div></div>
+        <div class="row">
+          <button class="btn btn-sm" data-cap-dl="${c.name}">⬇</button>
+          <button class="btn btn-sm" data-cap-an="${c.name}">🔬</button>
+          <button class="btn btn-sm btn-danger" data-cap-del="${c.name}">🗑</button>
+        </div>
+      </div>`).join('');
+  }catch(e){ console.warn(e); $('#cap-list').innerHTML='<div class="empty">Capture-API nicht erreichbar</div>'; }
+}
+$('#cap-start')?.addEventListener('click', async () => {
+  const iface = $('#cap-iface').value;
+  const duration_sec = parseInt($('#cap-duration').value||'0',10);
+  const r = await api('/api/capture/start',{method:'POST',body:{iface,duration_sec}});
+  toast(r.ok===false ? (r.message||'Fehler') : 'Capture gestartet');
+  refreshCapture();
+});
+$('#cap-stop')?.addEventListener('click', async () => { await api('/api/capture/stop',{method:'POST',body:{}}); toast('Stop'); refreshCapture(); });
+document.addEventListener('click', async (ev) => {
+  const t = ev.target;
+  if(t.dataset?.capDl){ window.open('/api/capture/download/'+encodeURIComponent(t.dataset.capDl), '_blank'); }
+  if(t.dataset?.capAn){
+    $('#cap-analysis').textContent='Analysiere…';
+    const r = await api('/api/capture/analyze',{method:'POST',body:{name:t.dataset.capAn,limit:40}});
+    let out = `File: ${r.file||''}  Size: ${r.size||0}  tshark: ${r.tshark}\n\n`;
+    if(r.io_stat) out += '=== IO ===\n'+r.io_stat+'\n';
+    if(r.protocol_hierarchy) out += '=== Protocols ===\n'+r.protocol_hierarchy+'\n';
+    if(r.endpoints) out += '=== Endpoints ===\n'+r.endpoints+'\n';
+    if(r.packets_preview?.length){ out += '=== Preview ===\n'; r.packets_preview.forEach(p=>{ out += `#${p.no} ${p.time} ${p.src}→${p.dst} ${p.proto} ${p.len}\n`; }); }
+    if(r.error) out += '\nError: '+r.error;
+    if(r.message) out += '\n'+r.message;
+    $('#cap-analysis').textContent = out;
+  }
+  if(t.dataset?.capDel){ if(!confirm('Löschen?'))return; await api('/api/capture/delete',{method:'POST',body:{name:t.dataset.capDel}}); refreshCapture(); }
+});
+setInterval(() => { if($('#panel-capture')?.classList.contains('active')) refreshCapture(); }, 4000);
+
+async function refreshWhitelist(){
+  const r = await api('/api/whitelist');
+  const list = r.whitelist || r.entries || r || [];
+  const arr = Array.isArray(list) ? list : Object.keys(list);
+  const box = $('#wl-list');
+  if(!arr.length){ box.innerHTML='<div class="empty">Leer</div>'; return; }
+  box.innerHTML = arr.map(x => {
+    const v = typeof x === 'string' ? x : (x.ip||x.mac||JSON.stringify(x));
+    return `<div class="row" style="justify-content:space-between;padding:.4rem 0;border-bottom:1px solid var(--border)">
+      <code>${v}</code>
+      <button class="btn btn-sm" data-wl-toggle="${v}">Entfernen</button>
+    </div>`;
+  }).join('');
+}
+$('#btn-wl-add')?.addEventListener('click', async () => {
+  const v = $('#wl-entry').value.trim();
+  if(!v) return;
+  const body = v.includes(':') || v.includes('-') ? {mac:v} : {ip:v};
+  await api('/api/whitelist',{method:'POST',body});
+  $('#wl-entry').value=''; toast('Whitelist aktualisiert');
+  refreshWhitelist();
+});
+document.addEventListener('click', async (ev) => {
+  if(ev.target.dataset?.wlToggle){
+    const v = ev.target.dataset.wlToggle;
+    const body = v.includes(':') || v.includes('-') ? {mac:v} : {ip:v};
+    await api('/api/whitelist',{method:'POST',body});
+    refreshWhitelist();
+  }
+});
+
+async function refreshConfig(){
+  const [eff, st] = await Promise.all([api('/api/config/effective'), api('/api/status')]);
+  $('#cfg-pre').textContent = JSON.stringify(eff, null, 2);
+  $('#status-pre').textContent = JSON.stringify(st, null, 2);
+  if(eff.version) $('#ver-badge').textContent = eff.version;
+}
+$('#cfg-scan')?.addEventListener('click', () => $('#btn-force-scan').click());
+$('#cfg-perimeter')?.addEventListener('click', async () => { await api('/api/security/perimeter',{method:'POST',body:{}}); toast('Perimeter OK'); });
+$('#cfg-threat')?.addEventListener('click', async () => { await api('/api/security/threat-intel',{method:'POST',body:{}}); toast('Threat-Intel OK'); });
+
+showTab('overview');
+setInterval(() => { if($('#panel-overview')?.classList.contains('active')) refreshOverview(); }, 15000);
+</script>
+</body>
+</html>
