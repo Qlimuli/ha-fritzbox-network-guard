@@ -58,3 +58,25 @@ python3 tests/test_state.py
 ## License
 
 MIT
+
+---
+
+## 2.2 – Packet Capture & Traffic Analysis (Wireshark-style)
+
+### In-Addon Capture
+- Uses the same hidden FritzBox capture endpoint that community Wireshark extcap plugins use
+- Select interface (LAN bridge, Internet/WAN, physical ports, WLAN …)
+- PCAPs stored under `/data/captures`
+- One-click download + light analysis (tshark): protocol hierarchy, top talkers, packet preview
+- Visualisation hooks in the Ingress UI
+
+### Host-side Wireshark Extcap
+Copy the script from the `extcap/` folder of this repository into your desktop Wireshark extcap directory (see `extcap/README.md`).  
+You then get a native **FRITZ!Box capture** interface inside Wireshark with full GUI filtering and analysis.
+
+### Companion Dashboard
+For a polished real-time overview, network topology, traffic charts and convenient device management install the excellent separate add-on:
+
+**[FRITZ!Portal](https://github.com/jayjojayson/FRITZ-Portal)** by @jayjojayson
+
+The two add-ons complement each other: Network Guard focuses on security, isolation and packet-level capture; FRITZ!Portal on UX and live topology.
