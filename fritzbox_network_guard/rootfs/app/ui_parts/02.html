@@ -1,0 +1,236 @@
+  <div class="card">
+    <h2>WAN / Verbindung</h2>
+    <pre class="pre" id="fz-wan-pre">—</pre>
+  </div>
+  <div class="card">
+    <h2>Port-Freigaben</h2>
+    <div id="fz-ports-box" class="empty">—</div>
+  </div>
+  <div class="card">
+    <h2>WLAN</h2>
+    <pre class="pre" id="fz-wlan-pre">—</pre>
+  </div>
+  <div class="card">
+    <h2>Geräte-Log (Fritz)</h2>
+    <div id="fz-logs-box" class="empty">—</div>
+  </div>
+</section>
+
+<!-- CAPTURE / TRAFFIC -->
+<section class="panel" id="panel-capture" data-panel="capture">
+  <div class="card">
+    <h2>📡 Packet Capture <span class="badge badge-muted">Wireshark-kompatibel</span></h2>
+    <p class="muted" style="margin-bottom:.75rem">Live-Capture vom FritzBox-Interface (gleicher Endpoint wie Extcap). PCAPs unter /data/captures.</p>
+    <div class="row" style="margin-bottom:.75rem">
+      <label>Interface
+        <select id="cap-iface">
+          <option value="1-lan">LAN (bridge)</option>
+          <option value="2-1">Internet (WAN)</option>
+          <option value="1-eth0">Physical LAN1</option>
+          <option value="1-eth1">Physical LAN2</option>
+          <option value="1-eth2">Physical LAN3</option>
+          <option value="1-eth3">Physical LAN4</option>
+          <option value="4-133">WLAN 2.4 GHz</option>
+          <option value="4-135">WLAN 5 GHz</option>
+        </select>
+      </label>
+      <label>Dauer (s, 0=∞)
+        <input id="cap-duration" type="number" min="0" value="60" style="width:6rem">
+      </label>
+      <button class="btn btn-accent" id="cap-start">▶ Start</button>
+      <button class="btn btn-danger" id="cap-stop">■ Stop</button>
+      <span id="cap-status" class="badge badge-muted">idle</span>
+    </div>
+    <div id="cap-live" class="muted"></div>
+  </div>
+  <div class="card">
+    <h3>Gespeicherte Captures</h3>
+    <div id="cap-list" class="empty">Keine Captures</div>
+  </div>
+  <div class="card">
+    <h3>Analyse (tshark)</h3>
+    <pre class="pre" id="cap-analysis">Noch keine Analyse</pre>
+  </div>
+  <p class="muted" style="font-size:.75rem">Host-Extcap: siehe Repo <code>extcap/</code> · Companion: FRITZ!Portal</p>
+</section>
+
+<!-- WHITELIST -->
+<section class="panel" id="panel-whitelist" data-panel="whitelist">
+  <div class="card">
+    <h2>Whitelist</h2>
+    <p class="muted" style="margin-bottom:.75rem">Geschützte IPs/MACs werden nie auto-gesperrt.</p>
+    <div class="row" style="margin-bottom:.75rem">
+      <input id="wl-entry" placeholder="IP oder MAC" style="flex:1">
+      <button class="btn btn-ok" id="btn-wl-add">Hinzufügen</button>
+    </div>
+    <div id="wl-list" class="empty">Leer</div>
+  </div>
+</section>
+
+<!-- CONFIG -->
+<section class="panel" id="panel-config" data-panel="config">
+  <div class="card">
+    <h2>Effektive Runtime-Config</h2>
+    <p class="muted" style="margin-bottom:.5rem">Nur Anzeige – Änderungen in den Add-on-Optionen in HA vornehmen.</p>
+    <pre class="pre" id="cfg-pre">Laden…</pre>
+  </div>
+  <div class="card">
+    <h2>Status / Diagnose</h2>
+    <pre class="pre" id="status-pre">—</pre>
+  </div>
+  <div class="card">
+    <h2>Manuelle Aktionen</h2>
+    <div class="row">
+      <button class="btn btn-accent" id="cfg-scan">Force Scan</button>
+      <button class="btn" id="cfg-perimeter">Perimeter</button>
+      <button class="btn" id="cfg-threat">Threat-Intel</button>
+    </div>
+  </div>
+</section>
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const $ = (s, el=document) => el.querySelector(s);
+const $$ = (s, el=document) => [...el.querySelectorAll(s)];
+const BASE = (document.querySelector('base') && document.querySelector('base').href) || '';
+
+function toast(msg, ms=2800){
+  const t = $('#toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), ms);
+}
+
+async function api(path, opts={}){
+  const url = path.startsWith('http') ? path : (path.startsWith('/') ? path : '/' + path);
+  const init = { credentials:'same-origin', ...opts };
+  if(init.body && typeof init.body === 'object' && !(init.body instanceof FormData)){
+    init.headers = { 'Content-Type':'application/json', ...(init.headers||{}) };
+    init.body = JSON.stringify(init.body);
+  }
+  try{
+    const r = await fetch(url, init);
+    const ct = r.headers.get('content-type')||'';
+    if(ct.includes('json')) return await r.json();
+    return { ok:r.ok, status:r.status, text: await r.text() };
+  }catch(e){
+    console.error(path, e);
+    return { ok:false, error:String(e) };
+  }
+}
+
+function showTab(name){
+  $$('.panel').forEach(p => p.classList.toggle('active', p.dataset.panel === name));
+  $$('.tab, .nav-item').forEach(el => el.classList.toggle('active', el.dataset.tab === name));
+  if(name === 'overview') refreshOverview();
+  if(name === 'devices') refreshDevices();
+  if(name === 'blocked') refreshBlocked();
+  if(name === 'security') refreshSecurity();
+  if(name === 'fritz') refreshFritz();
+  if(name === 'capture') refreshCapture();
+  if(name === 'whitelist') refreshWhitelist();
+  if(name === 'config') refreshConfig();
+}
+
+document.addEventListener('click', (ev) => {
+  const t = ev.target.closest('[data-tab]');
+  if(t && t.dataset.tab){ showTab(t.dataset.tab); return; }
+});
+
+$('#btn-refresh')?.addEventListener('click', () => {
+  const active = $('.panel.active')?.dataset.panel || 'overview';
+  showTab(active);
+  toast('Aktualisiert');
+});
+$('#btn-force-scan')?.addEventListener('click', async () => {
+  toast('Scan gestartet…');
+  await api('/api/scan/force', { method:'POST', body:{} });
+  setTimeout(() => showTab($('.panel.active')?.dataset.panel || 'overview'), 1500);
+});
+
+function fmtBytes(n){ if(!n) return '0 B'; const u=['B','KB','MB','GB']; let i=0; let x=n; while(x>=1024&&i<u.length-1){x/=1024;i++;} return x.toFixed(i?1:0)+' '+u[i]; }
+function fmtTime(iso){ if(!iso) return '—'; try{ return new Date(iso).toLocaleString(); }catch{ return iso; } }
+
+/* ---------- Overview ---------- */
+async function refreshOverview(){
+  const [st, ov, sec, known, blocked] = await Promise.all([
+    api('/api/status'), api('/api/overview'), api('/api/security'), api('/api/known'), api('/api/blocked')
+  ]);
+  const k = known.devices || known || {};
+  const b = blocked.devices || blocked || {};
+  const kList = Array.isArray(k) ? k : Object.values(k);
+  const bList = Array.isArray(b) ? b : Object.values(b);
+  const active = kList.filter(d => d.active).length;
+  $('#header-sub').textContent = (st.fritzbox_host||'fritz.box') + ' · Scan ' + (st.scan_interval||'?') + 's';
+  const fritzOk = st.fritz_ok ?? ov?.fritz_ok ?? sec?.fritz_ok;
+  const pill = $('#fritz-pill');
+  if(fritzOk === true){ pill.className='badge badge-ok'; pill.textContent='Fritz OK'; }
+  else if(fritzOk === false){ pill.className='badge badge-danger'; pill.textContent='Fritz DOWN'; }
+  else { pill.className='badge badge-muted'; pill.textContent='Fritz ?'; }
+
+  const secSt = sec || ov?.security || {};
+  $('#overview-stats').innerHTML = [
+    ['Geräte', kList.length, active+' aktiv'],
+    ['Gesperrt', bList.length, 'WAN-Isolation'],
+    ['Events', (secSt.events_total ?? secSt.event_count ?? (secSt.recent_events||[]).length) || 0, 'Security'],
+    ['Threat-Intel', secSt.threat_intel_entries ?? secSt.threat_count ?? '—', secSt.threat_intel_updated ? fmtTime(secSt.threat_intel_updated) : ''],
+    ['Perimeter', (secSt.perimeter_open_ports||secSt.open_ports||[]).length, 'offene Ports'],
+    ['Scan', st.total_scans ?? ov?.total_scans ?? '—', st.last_scan ? fmtTime(st.last_scan) : ''],
+  ].map(([l,v,h]) => `<div class="stat"><div class="label">${l}</div><div class="value">${v}</div><div class="hint">${h||''}</div></div>`).join('');
+
+  const events = secSt.recent_events || secSt.events || [];
+  const box = $('#overview-events');
+  if(!events.length) box.innerHTML = '<div class="empty">Keine Events</div>';
+  else box.innerHTML = events.slice(0,12).map(e => {
+    const sev = (e.severity||e.level||'low').toLowerCase();
+    return `<div class="log-line ${sev}">${fmtTime(e.ts||e.time)} · <strong>${e.type||e.signature||'event'}</strong> · ${e.message||e.detail||e.src_ip||''}</div>`;
+  }).join('');
+}
+
+$('#ov-scan')?.addEventListener('click', () => $('#btn-force-scan').click());
+$('#ov-perimeter')?.addEventListener('click', async () => { toast('Perimeter…'); await api('/api/security/perimeter',{method:'POST',body:{}}); refreshOverview(); });
+$('#ov-threat')?.addEventListener('click', async () => { toast('Threat-Intel…'); await api('/api/security/threat-intel',{method:'POST',body:{}}); refreshOverview(); });
+$('#ov-deep')?.addEventListener('click', async () => { toast('Deep Scan…'); const r=await api('/api/security/deep-scan',{method:'POST',body:{}}); $('#deep-result').textContent=JSON.stringify(r,null,2); showTab('security'); });
+
+/* ---------- Devices ---------- */
+let _devicesCache = [];
+async function refreshDevices(){
+  const known = await api('/api/known');
+  const data = known.devices || known || {};
+  _devicesCache = Array.isArray(data) ? data : Object.values(data);
+  renderDevices();
+}
+function renderDevices(){
+  const q = ($('#dev-filter')?.value || '').toLowerCase();
+  const fa = $('#dev-filter-active')?.value || 'all';
+  let list = _devicesCache;
+  if(fa==='active') list = list.filter(d=>d.active);
+  if(fa==='inactive') list = list.filter(d=>!d.active);
+  if(q) list = list.filter(d => JSON.stringify(d).toLowerCase().includes(q));
+  $('#dev-count').textContent = list.length;
+  const box = $('#device-list');
+  if(!list.length){ box.innerHTML='<div class="empty">Keine Geräte</div>'; return; }
+  box.innerHTML = list.map(d => {
+    const ip=d.ip||''; const mac=d.mac||'';
+    const pills=[];
+    if(d.active) pills.push('<span class="badge badge-ok">aktiv</span>');
+    else pills.push('<span class="badge badge-muted">inaktiv</span>');
+    if(d.whitelisted) pills.push('<span class="badge badge-accent">whitelist</span>');
+    if(d.blocked) pills.push('<span class="badge badge-danger">blocked</span>');
+    if(d.critical) pills.push('<span class="badge badge-crit">critical</span>');
+    return `<div class="device-card">
+      <div class="name">${d.name||d.hostname||ip||mac||'?'}</div>
+      <div class="meta">${ip} · ${mac}${d.interface? ' · '+d.interface:''}</div>
+      <div class="pills">${pills.join('')}</div>
+      <div class="row" style="margin-top:.5rem">
+        ${ip?`<button class="btn btn-sm btn-danger" data-block="${ip}">WAN sperren</button>`:''}
+        ${ip?`<button class="btn btn-sm" data-unblock="${ip}">Entsperren</button>`:''}
+        <button class="btn btn-sm" data-wl-ip="${ip}" data-wl-mac="${mac}">Whitelist</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+$('#dev-filter')?.addEventListener('input', renderDevices);
+$('#dev-filter-active')?.addEventListener('change', renderDevices);
