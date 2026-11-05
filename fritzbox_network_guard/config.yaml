@@ -1,9 +1,10 @@
 name: "FritzBox Network Guard"
-version: "2.1.0"
+version: "2.2.0"
 slug: fritzbox_network_guard
 description: >-
-  LAN-Scan, FritzBox-Logs, Perimeter/Threat-Intel, Deep-Scan, WAN-Sperre
-  über TR-064 – nur aktive Geräte werden auto-behandelt.
+  LAN-Scan, FritzBox Packet-Capture (Wireshark-kompatibel), Traffic-Analyse &
+  Visualisierung, Logs, Perimeter/Threat-Intel, WAN-Sperre über TR-064.
+  Companion zu FRITZ!Portal.
 arch:
   - aarch64
   - amd64
