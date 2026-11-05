@@ -41,7 +41,7 @@ p = Path("/opt/network-guard")
 def assemble(pattern, dest_name):
     chunks = sorted(p.glob(pattern))
     if not chunks:
-        return
+        return False
     try:
         b64 = "".join(c.read_text().strip() for c in chunks)
         pad = (-len(b64)) % 4
@@ -50,10 +50,18 @@ def assemble(pattern, dest_name):
         data = gzip.decompress(base64.b64decode(b64))
         (p / dest_name).write_bytes(data)
         print(f"Assembled {dest_name} from {len(chunks)} chunks ({len(data)} bytes)", file=sys.stderr)
+        return True
     except Exception as exp:
         print(f"{dest_name} assemble failed: {exp}", file=sys.stderr)
+        return False
 
-assemble("ui.b64.*", "ui.html")
+ok = assemble("ui.b64.*", "ui.html")
+if not ok:
+    ui = p / "ui.html"
+    if ui.exists():
+        print(f"Using bundled ui.html ({ui.stat().st_size} bytes)", file=sys.stderr)
+    else:
+        print("WARNING: no UI available", file=sys.stderr)
 assemble("security_engine.b64.*", "security_engine.py")
 PY
 
