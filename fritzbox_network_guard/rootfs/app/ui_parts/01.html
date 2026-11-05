@@ -1,0 +1,200 @@
+:.1rem;padding:.4rem .3rem;color:var(--muted);font-size:.62rem;font-weight:600;
+  cursor:pointer;border:none;background:transparent;
+}
+.nav-item.active{color:var(--accent)}
+.nav-item .ico{font-size:1.15rem;line-height:1}
+
+main{padding:1rem;max-width:1100px;margin:0 auto}
+.panel{display:none}
+.panel.active{display:block}
+.card{
+  background:var(--card);border:1px solid var(--border);border-radius:var(--radius);
+  padding:1rem;margin-bottom:1rem;
+}
+.card h2,.card h3{font-size:1rem;margin-bottom:.6rem;display:flex;align-items:center;gap:.5rem;flex-wrap:wrap}
+.muted{color:var(--muted);font-size:.85rem}
+.row{display:flex;gap:.5rem;flex-wrap:wrap;align-items:center}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:.75rem}
+.stat{
+  background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:.75rem;
+}
+.stat .label{font-size:.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:.03em}
+.stat .value{font-size:1.35rem;font-weight:700;margin-top:.2rem}
+.stat .hint{font-size:.7rem;color:var(--muted);margin-top:.15rem}
+
+.btn{
+  appearance:none;border:1px solid var(--border);background:var(--panel);color:var(--text);
+  padding:.5rem .85rem;border-radius:8px;font-size:.8rem;font-weight:600;cursor:pointer;
+  min-height:var(--touch);
+}
+.btn:hover{border-color:var(--accent)}
+.btn-accent{background:#0c4a6e;border-color:#0284c7;color:#e0f2fe}
+.btn-danger{background:#7f1d1d;border-color:#b91c1c;color:#fecaca}
+.btn-ok{background:#14532d;border-color:#16a34a;color:#bbf7d0}
+.btn-sm{padding:.3rem .55rem;min-height:auto;font-size:.72rem}
+
+input,select,textarea{
+  background:var(--panel);border:1px solid var(--border);color:var(--text);
+  border-radius:8px;padding:.5rem .65rem;font-size:.85rem;min-height:var(--touch);
+}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent)}
+label{font-size:.8rem;color:var(--muted);display:flex;flex-direction:column;gap:.25rem}
+
+table{width:100%;border-collapse:collapse;font-size:.8rem}
+th,td{text-align:left;padding:.55rem .4rem;border-bottom:1px solid var(--border);vertical-align:top}
+th{color:var(--muted);font-weight:600;font-size:.7rem;text-transform:uppercase}
+tr:hover td{background:rgba(56,189,248,.04)}
+.empty{color:var(--muted);padding:1.5rem;text-align:center;font-size:.9rem}
+.pre{
+  white-space:pre-wrap;font-size:.72rem;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+  background:#0a0f18;padding:.75rem;border-radius:8px;max-height:22rem;overflow:auto;
+  border:1px solid var(--border);color:#cbd5e1;
+}
+.device-card{
+  background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:.75rem;margin-bottom:.5rem;
+}
+.device-card .name{font-weight:600;font-size:.9rem}
+.device-card .meta{font-size:.75rem;color:var(--muted);margin-top:.2rem}
+.pills{display:flex;gap:.3rem;flex-wrap:wrap;margin-top:.4rem}
+.log-line{font-size:.75rem;padding:.35rem 0;border-bottom:1px solid var(--border);font-family:ui-monospace,monospace}
+.log-line.high{color:#fca5a5}
+.log-line.medium{color:#fcd34d}
+.log-line.low{color:var(--muted)}
+.toast{
+  position:fixed;top:calc(1rem + var(--safe-top));left:50%;transform:translateX(-50%);
+  background:#1e293b;border:1px solid var(--accent);color:var(--text);
+  padding:.6rem 1rem;border-radius:10px;z-index:50;font-size:.85rem;
+  box-shadow:0 8px 30px rgba(0,0,0,.4);display:none;max-width:90%;
+}
+.toast.show{display:block}
+@media(min-width:900px){
+  .tabs-desktop{display:flex}
+  .bottom-nav{display:none}
+  body{padding-bottom:1rem}
+}
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>🛡️ Network Guard <span id="ver-badge" class="badge badge-accent">2.2.2</span></h1>
+    <div class="sub" id="header-sub">Laden…</div>
+  </div>
+  <div class="row">
+    <span id="fritz-pill" class="badge badge-muted">Fritz ?</span>
+    <button class="btn btn-sm" id="btn-refresh">↻ Refresh</button>
+    <button class="btn btn-sm btn-accent" id="btn-force-scan">Scan</button>
+  </div>
+</header>
+
+<div class="tabs-desktop" id="tabs-desktop">
+  <div class="tab active" data-tab="overview">Übersicht</div>
+  <div class="tab" data-tab="devices">Geräte</div>
+  <div class="tab" data-tab="blocked">Gesperrt</div>
+  <div class="tab" data-tab="security">Security</div>
+  <div class="tab" data-tab="fritz">Fritz</div>
+  <div class="tab" data-tab="capture">Traffic</div>
+  <div class="tab" data-tab="whitelist">Whitelist</div>
+  <div class="tab" data-tab="config">Einstellungen</div>
+</div>
+
+<nav class="bottom-nav" id="bottom-nav">
+  <button class="nav-item active" data-tab="overview"><span class="ico">📊</span>Übersicht</button>
+  <button class="nav-item" data-tab="devices"><span class="ico">💻</span>Geräte</button>
+  <button class="nav-item" data-tab="blocked"><span class="ico">🚫</span>Gesperrt</button>
+  <button class="nav-item" data-tab="security"><span class="ico">🔐</span>Security</button>
+  <button class="nav-item" data-tab="fritz"><span class="ico">📡</span>Fritz</button>
+  <button class="nav-item" data-tab="capture"><span class="ico">🧪</span>Traffic</button>
+  <button class="nav-item" data-tab="whitelist"><span class="ico">✅</span>Whitelist</button>
+  <button class="nav-item" data-tab="config"><span class="ico">⚙️</span>Config</button>
+</nav>
+
+<main>
+<!-- OVERVIEW -->
+<section class="panel active" id="panel-overview" data-panel="overview">
+  <div class="grid" id="overview-stats"></div>
+  <div class="card" style="margin-top:1rem">
+    <h2>Letzte Security-Events</h2>
+    <div id="overview-events" class="empty">Keine Events</div>
+  </div>
+  <div class="card">
+    <h2>Schnellaktionen</h2>
+    <div class="row">
+      <button class="btn btn-accent" id="ov-scan">Force Scan</button>
+      <button class="btn" id="ov-perimeter">Perimeter Scan</button>
+      <button class="btn" id="ov-threat">Threat-Intel refresh</button>
+      <button class="btn" id="ov-deep">Deep LAN Scan</button>
+    </div>
+  </div>
+</section>
+
+<!-- DEVICES -->
+<section class="panel" id="panel-devices" data-panel="devices">
+  <div class="card">
+    <h2>Geräte <span class="badge badge-muted" id="dev-count">0</span></h2>
+    <div class="row" style="margin-bottom:.75rem">
+      <input id="dev-filter" placeholder="Filter Name / IP / MAC…" style="flex:1;min-width:12rem">
+      <select id="dev-filter-active">
+        <option value="all">Alle</option>
+        <option value="active">Nur aktiv</option>
+        <option value="inactive">Inaktiv</option>
+      </select>
+    </div>
+    <div id="device-list" class="empty">Laden…</div>
+  </div>
+</section>
+
+<!-- BLOCKED -->
+<section class="panel" id="panel-blocked" data-panel="blocked">
+  <div class="card">
+    <h2>Gesperrte Geräte (WAN)</h2>
+    <div class="row" style="margin-bottom:.75rem">
+      <input id="manual-ip" placeholder="IP manuell sperren" style="flex:1">
+      <button class="btn btn-danger" id="btn-manual-block">Sperren</button>
+    </div>
+    <div id="blocked-list" class="empty">Keine Sperren</div>
+  </div>
+</section>
+
+<!-- SECURITY -->
+<section class="panel" id="panel-security" data-panel="security">
+  <div class="card">
+    <h2>Security Status</h2>
+    <div class="grid" id="sec-stats"></div>
+    <div class="row" style="margin-top:.75rem">
+      <button class="btn btn-accent" id="sec-perimeter">Perimeter jetzt</button>
+      <button class="btn" id="sec-threat">Threat-Intel</button>
+      <button class="btn" id="sec-deep">Deep Scan</button>
+    </div>
+  </div>
+  <div class="card">
+    <h2>IP prüfen (Threat-Intel)</h2>
+    <div class="row">
+      <input id="check-ip" placeholder="z.B. 1.2.3.4" style="flex:1">
+      <button class="btn" id="btn-check-ip">Prüfen</button>
+    </div>
+    <pre class="pre" id="check-ip-result" style="margin-top:.5rem;display:none"></pre>
+  </div>
+  <div class="card">
+    <h2>Events <span class="badge badge-muted" id="evt-count">0</span></h2>
+    <div id="sec-events" class="empty">Keine Events</div>
+  </div>
+  <div class="card">
+    <h2>Deep-Scan Ergebnis</h2>
+    <pre class="pre" id="deep-result">Noch kein Scan</pre>
+  </div>
+</section>
+
+<!-- FRITZ -->
+<section class="panel" id="panel-fritz" data-panel="fritz">
+  <div class="card">
+    <h2>FritzBox Insights</h2>
+    <div class="row" style="margin-bottom:.75rem">
+      <button class="btn btn-accent" id="fz-refresh">Alles laden</button>
+      <button class="btn" id="fz-logs">Logs</button>
+      <button class="btn" id="fz-wan">WAN</button>
+      <button class="btn" id="fz-ports">Ports</button>
+      <button class="btn" id="fz-wlan">WLAN</button>
+    </div>
+    <div class="grid" id="fz-summary"></div>
+  </div>

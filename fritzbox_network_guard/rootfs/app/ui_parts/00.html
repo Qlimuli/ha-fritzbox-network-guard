@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<meta name="theme-color" content="#0b1220">
+<title>FritzBox Network Guard</title>
+<style>
+:root{
+  --bg:#0b1220;--panel:#111827;--card:#1a2332;--border:#243044;
+  --text:#e5eefb;--muted:#8b9bb4;--accent:#38bdf8;
+  --ok:#22c55e;--warn:#f59e0b;--danger:#ef4444;--crit:#a855f7;
+  --radius:12px;--touch:44px;
+  --safe-top:env(safe-area-inset-top,0px);
+  --safe-bottom:env(safe-area-inset-bottom,0px);
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html{height:100%;-webkit-text-size-adjust:100%}
+body{
+  font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,sans-serif;
+  background:var(--bg);color:var(--text);line-height:1.45;
+  min-height:100%;min-height:100dvh;
+  padding-bottom:calc(4.8rem + var(--safe-bottom));
+}
+header{
+  display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;
+  gap:.75rem;padding:calc(.9rem + var(--safe-top)) 1rem .9rem;
+  border-bottom:1px solid var(--border);
+  background:linear-gradient(180deg,#121a2b,var(--bg));
+  position:sticky;top:0;z-index:20;
+}
+header h1{font-size:1.15rem;font-weight:700;display:flex;align-items:center;gap:.45rem}
+header .sub{color:var(--muted);font-size:.8rem;margin-top:.15rem}
+.badge{font-size:.7rem;padding:.25rem .55rem;border-radius:999px;font-weight:600;white-space:nowrap}
+.badge-ok{background:#14532d;color:#86efac}
+.badge-warn{background:#78350f;color:#fcd34d}
+.badge-danger{background:#7f1d1d;color:#fca5a5}
+.badge-muted{background:#1e293b;color:var(--muted)}
+.badge-crit{background:#4c1d95;color:#e9d5ff}
+.badge-accent{background:#0c4a6e;color:#7dd3fc}
+
+.tabs-desktop{display:none;gap:.35rem;padding:.5rem 1rem;border-bottom:1px solid var(--border);overflow-x:auto}
+.tab{padding:.45rem .8rem;border-radius:8px;cursor:pointer;font-size:.8rem;font-weight:600;color:var(--muted);white-space:nowrap}
+.tab.active{background:var(--card);color:var(--accent)}
+.tab:hover{color:var(--text)}
+
+.bottom-nav{
+  position:fixed;bottom:0;left:0;right:0;z-index:30;
+  display:flex;background:#0f172a;border-top:1px solid var(--border);
+  padding:0.25rem 0 calc(0.25rem + var(--safe-bottom));
+  overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;
+}
+.bottom-nav::-webkit-scrollbar{display:none}
+.nav-item{
+  flex:1 0 auto;min-width:4rem;display:flex;flex-direction:column;align-items:center;
+  gap
