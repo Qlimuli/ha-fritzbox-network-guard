@@ -38,7 +38,7 @@ from pathlib import Path
 import base64, gzip, sys
 p = Path("/opt/network-guard")
 
-def assemble(pattern, dest_name):
+def assemble_pattern(pattern, dest_name):
     chunks = sorted(p.glob(pattern))
     if not chunks:
         return False
@@ -55,14 +55,18 @@ def assemble(pattern, dest_name):
         print(f"{dest_name} assemble failed: {exp}", file=sys.stderr)
         return False
 
-ok = assemble("ui.b64.*", "ui.html")
+# Prefer complete full-GUI payload, then ui.b64.*, then bundled ui.html
+ok = assemble_pattern("ui_full.gz.b64.*", "ui.html")
+if not ok:
+    ok = assemble_pattern("ui.b64.*", "ui.html")
 if not ok:
     ui = p / "ui.html"
     if ui.exists():
         print(f"Using bundled ui.html ({ui.stat().st_size} bytes)", file=sys.stderr)
     else:
         print("WARNING: no UI available", file=sys.stderr)
-assemble("security_engine.b64.*", "security_engine.py")
+
+assemble_pattern("security_engine.b64.*", "security_engine.py")
 PY
 
 cd "${APP_HOME}"
