@@ -1,5 +1,5 @@
 #!/usr/bin/with-contenv bashio
-bashio::log.info "Starting FritzBox Network Guard 2.2.2..."
+bashio::log.info "Starting FritzBox Network Guard 2.2.3..."
 
 export FRITZBOX_HOST=$(bashio::config 'fritzbox_host')
 export FRITZBOX_USER=$(bashio::config 'fritzbox_user')
@@ -33,10 +33,14 @@ if [ ! -f "${APP_HOME}/main.py" ]; then
   exit 1
 fi
 
-# Assemble full GUI from plain HTML fragments (reliable, no b64)
+# Assemble full GUI from plain HTML fragments (preferred over any truncated b64)
 if ls "${APP_HOME}/ui_parts"/*.html >/dev/null 2>&1; then
   cat $(ls "${APP_HOME}/ui_parts"/*.html | sort) > "${APP_HOME}/ui.html"
-  bashio::log.info "Assembled UI from ui_parts ($(wc -c < "${APP_HOME}/ui.html") bytes)"
+  SZ=$(wc -c < "${APP_HOME}/ui.html")
+  bashio::log.info "Assembled UI from ui_parts (${SZ} bytes)"
+  if [ "$SZ" -lt 15000 ]; then
+    bashio::log.warning "Assembled UI looks too small – check ui_parts"
+  fi
 fi
 
 python3 - <<'PY' || true
@@ -63,7 +67,7 @@ def assemble(pattern, dest_name):
 
 # Only use b64 UI if no ui_parts assembled file exists / empty
 ui = p / "ui.html"
-if not ui.exists() or ui.stat().st_size < 5000:
+if not ui.exists() or ui.stat().st_size < 10000:
     assemble("ui_full.gz.b64.*", "ui.html") or assemble("ui.b64.*", "ui.html")
 
 assemble("security_engine.b64.*", "security_engine.py")
