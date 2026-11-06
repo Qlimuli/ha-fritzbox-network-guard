@@ -1,5 +1,5 @@
 #!/usr/bin/with-contenv bashio
-bashio::log.info "Starting FritzBox Network Guard 2.2.4..."
+bashio::log.info "Starting FritzBox Network Guard 2.2.5..."
 
 export FRITZBOX_HOST=$(bashio::config 'fritzbox_host')
 export FRITZBOX_USER=$(bashio::config 'fritzbox_user')
@@ -33,24 +33,15 @@ if [ ! -f "${APP_HOME}/main.py" ]; then
   exit 1
 fi
 
-# Always assemble from ui_parts when present (overwrites any incomplete bundled ui.html)
-if ls "${APP_HOME}/ui_parts"/*.html >/dev/null 2>&1; then
-  cat $(ls "${APP_HOME}/ui_parts"/*.html | sort) > "${APP_HOME}/ui.html"
-  SZ=$(wc -c < "${APP_HOME}/ui.html")
-  bashio::log.info "Assembled UI from ui_parts (${SZ} bytes)"
-  if [ "$SZ" -lt 10000 ]; then
-    bashio::log.warning "Assembled UI is small – parts may be incomplete"
-  fi
-else
-  bashio::log.info "Using bundled ui.html ($(wc -c < "${APP_HOME}/ui.html" 2>/dev/null || echo 0) bytes)"
-fi
-
+# 1) Prefer complete UI from ui_full.gz.b64.* (most reliable for large HTML)
+# 2) Else assemble ui_parts
+# 3) Else keep bundled ui.html
 python3 - <<'PY' || true
 from pathlib import Path
 import base64, gzip, sys
 p = Path("/opt/network-guard")
 
-def assemble(pattern, dest_name):
+def assemble_b64(pattern, dest_name):
     chunks = sorted(p.glob(pattern))
     if not chunks:
         return False
@@ -61,18 +52,40 @@ def assemble(pattern, dest_name):
             b64 += "=" * pad
         data = gzip.decompress(base64.b64decode(b64))
         (p / dest_name).write_bytes(data)
-        print(f"Assembled {dest_name} from {len(chunks)} chunks ({len(data)} bytes)", file=sys.stderr)
+        print(f"Assembled {dest_name} from {len(chunks)} b64 chunks ({len(data)} bytes)", file=sys.stderr)
         return True
     except Exception as exp:
-        print(f"{dest_name} assemble failed: {exp}", file=sys.stderr)
+        print(f"{dest_name} b64 assemble failed: {exp}", file=sys.stderr)
         return False
 
+ok = assemble_b64("ui_full.gz.b64.*", "ui.html")
+if not ok:
+    parts = sorted(p.glob("ui_parts/*.html"))
+    if parts:
+        data = b"".join(x.read_bytes() for x in parts)
+        if len(data) > 10000:
+            (p / "ui.html").write_bytes(data)
+            print(f"Assembled ui.html from {len(parts)} parts ({len(data)} bytes)", file=sys.stderr)
+        else:
+            print(f"ui_parts too small ({len(data)}), keeping existing ui.html", file=sys.stderr)
+    else:
+        print("Using existing ui.html", file=sys.stderr)
+# never leave a tiny/broken UI
 ui = p / "ui.html"
-if not ui.exists() or ui.stat().st_size < 5000:
-    assemble("ui_full.gz.b64.*", "ui.html") or assemble("ui.b64.*", "ui.html")
+if ui.exists():
+    sz = ui.stat().st_size
+    print(f"UI file size: {sz}", file=sys.stderr)
+    if sz < 10000:
+        print("WARNING: ui.html suspiciously small", file=sys.stderr)
 
-assemble("security_engine.b64.*", "security_engine.py")
+assemble_b64("security_engine.b64.*", "security_engine.py")
 PY
+
+if [ -f "${APP_HOME}/ui.html" ]; then
+  bashio::log.info "UI ready: $(wc -c < "${APP_HOME}/ui.html") bytes"
+else
+  bashio::log.warning "No UI file found"
+fi
 
 cd "${APP_HOME}"
 exec python3 "${APP_HOME}/main.py"
