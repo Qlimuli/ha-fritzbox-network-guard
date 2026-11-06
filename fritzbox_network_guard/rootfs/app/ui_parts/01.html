@@ -2,22 +2,22 @@
   <div class="card">
     <h2>Geräte <span class="badge badge-muted" id="dev-count">0</span></h2>
     <div class="row" style="margin-bottom:.75rem">
-      <input id="dev-filter" placeholder="Filter Name / IP / MAC…" style="flex:1;min-width:10rem">
+      <input id="dev-filter" placeholder="Filter Name / IP / MAC…" style="flex:1;min-width:12rem">
       <select id="dev-filter-active">
         <option value="all">Alle</option>
         <option value="active">Nur aktiv</option>
         <option value="inactive">Inaktiv</option>
         <option value="crit">Kritisch</option>
       </select>
+      <button class="btn ghost" id="btn-refresh-dev">Aktualisieren</button>
     </div>
     <div id="device-list" class="empty">Laden…</div>
   </div>
 </section>
 
-<!-- BLOCKED -->
 <section class="panel" id="panel-blocked" data-panel="blocked">
   <div class="card">
-    <h2>Gesperrte Geräte (WAN-Isolation)</h2>
+    <h2>Gesperrte Geräte (WAN)</h2>
     <div class="row" style="margin-bottom:.75rem">
       <input id="manual-ip" placeholder="IP manuell sperren" style="flex:1">
       <button class="btn btn-danger" id="btn-manual-block">Sperren</button>
@@ -26,7 +26,6 @@
   </div>
 </section>
 
-<!-- SECURITY -->
 <section class="panel" id="panel-security" data-panel="security">
   <div class="card">
     <h2>Security Status</h2>
@@ -40,14 +39,14 @@
   <div class="card">
     <h2>IP prüfen (Threat-Intel)</h2>
     <div class="row">
-      <input id="check-ip" placeholder="z.B. 8.8.8.8" style="flex:1">
+      <input id="check-ip" placeholder="z.B. 1.2.3.4" style="flex:1">
       <button class="btn" id="btn-check-ip">Prüfen</button>
     </div>
     <pre class="pre" id="check-ip-result" style="margin-top:.5rem;display:none"></pre>
   </div>
   <div class="card">
-    <h2>Events & Logs</h2>
-    <div id="sec-events" class="empty">Laden…</div>
+    <h2>Events <span class="badge badge-muted" id="sec-ev-count">0</span></h2>
+    <div id="sec-events" class="empty">—</div>
   </div>
   <div class="card">
     <h2>Deep-Scan Ergebnis</h2>
@@ -55,125 +54,36 @@
   </div>
 </section>
 
-<!-- FRITZ -->
 <section class="panel" id="panel-fritz" data-panel="fritz">
   <div class="card">
-    <h2>FritzBox Zusammenfassung</h2>
-    <pre class="pre" id="fz-summary">Laden…</pre>
+    <h2>FritzBox Summary</h2>
+    <pre class="pre" id="fz-summary">—</pre>
   </div>
   <div class="card">
-    <h2>Ereignisprotokoll (Logs)</h2>
-    <div class="row" style="margin-bottom:.6rem">
+    <h2>Ereignisprotokoll</h2>
+    <div class="row" style="margin-bottom:.5rem">
       <select id="fz-log-filter">
         <option value="all">Alle</option>
         <option value="system">System</option>
         <option value="internet">Internet</option>
         <option value="wlan">WLAN</option>
+        <option value="telefon">Telefon</option>
         <option value="usb">USB</option>
-        <option value="telephony">Telefonie</option>
       </select>
-      <button class="btn btn-sm" id="fz-log-refresh">Aktualisieren</button>
+      <button class="btn" id="btn-fz-logs">Laden</button>
     </div>
-    <div id="fz-logs" class="empty">Laden…</div>
+    <pre class="pre" id="fz-logs-pre">—</pre>
   </div>
   <div class="card">
     <h2>WAN / Verbindung</h2>
-    <pre class="pre" id="fz-wan">—</pre>
+    <pre class="pre" id="fz-wan-pre">—</pre>
   </div>
   <div class="card">
     <h2>Port-Freigaben</h2>
-    <pre class="pre" id="fz-ports">—</pre>
+    <pre class="pre" id="fz-ports-pre">—</pre>
   </div>
   <div class="card">
     <h2>WLAN</h2>
-    <pre class="pre" id="fz-wlan">—</pre>
+    <pre class="pre" id="fz-wlan-pre">—</pre>
   </div>
 </section>
-
-<!-- CAPTURE / TRAFFIC -->
-<section class="panel" id="panel-capture" data-panel="capture">
-  <div class="card">
-    <h2>Packet Capture (FritzBox → PCAP)</h2>
-    <p class="muted" style="margin-bottom:.75rem">Nutzt den versteckten AVM-Endpoint (wie Wireshark Extcap). PCAP herunterladen & in Wireshark öffnen.</p>
-    <div class="row" style="margin-bottom:.6rem">
-      <label>Interface
-        <select id="cap-iface">
-          <option value="1-lan">LAN (bridge)</option>
-          <option value="2-1">Internet (WAN)</option>
-          <option value="1-eth0">Physical LAN1</option>
-          <option value="1-eth1">Physical LAN2</option>
-          <option value="1-eth2">Physical LAN3</option>
-          <option value="1-eth3">Physical LAN4</option>
-          <option value="4-133">WLAN 2.4 GHz</option>
-          <option value="4-135">WLAN 5 GHz</option>
-        </select>
-      </label>
-      <label>Dauer (s, 0=∞)
-        <input id="cap-duration" type="number" min="0" value="60" style="width:5.5rem">
-      </label>
-      <button class="btn btn-accent" id="cap-start">▶ Start</button>
-      <button class="btn btn-danger" id="cap-stop">■ Stop</button>
-      <span id="cap-status" class="badge badge-muted">idle</span>
-    </div>
-    <div id="cap-live" class="muted"></div>
-  </div>
-  <div class="card">
-    <h3>Gespeicherte Captures</h3>
-    <div id="cap-list" class="empty">Keine Captures</div>
-  </div>
-  <div class="card">
-    <h3>Analyse (tshark – Protokoll-Hierarchie / Endpoints)</h3>
-    <pre class="pre" id="cap-analysis">Noch keine Analyse – Capture starten oder vorhandene analysieren.</pre>
-  </div>
-  <p class="muted" style="font-size:.75rem">Host-Extcap: Repo <code>extcap/</code> · Companion: <a href="https://github.com/jayjojayson/FRITZ-Portal" target="_blank" style="color:var(--accent)">FRITZ!Portal</a></p>
-</section>
-
-<!-- WHITELIST -->
-<section class="panel" id="panel-whitelist" data-panel="whitelist">
-  <div class="card">
-    <h2>Whitelist (geschützt)</h2>
-    <p class="muted" style="margin-bottom:.75rem">Diese IPs/MACs werden <strong>nie</strong> automatisch gesperrt (HA-Host, Gateway, Fritz etc. sind ohnehin geschützt).</p>
-    <div class="row" style="margin-bottom:.75rem">
-      <input id="wl-entry" placeholder="IP oder MAC" style="flex:1">
-      <button class="btn btn-ok" id="btn-wl-add">Hinzufügen</button>
-    </div>
-    <div id="wl-list" class="empty">Leer</div>
-  </div>
-</section>
-
-<!-- CONFIG -->
-<section class="panel" id="panel-config" data-panel="config">
-  <div class="card">
-    <h2>Effektive Runtime-Config</h2>
-    <p class="muted" style="margin-bottom:.5rem">Nur Anzeige. Änderungen in den Add-on-Optionen in Home Assistant vornehmen und Add-on neu starten.</p>
-    <pre class="pre" id="cfg-pre">Laden…</pre>
-  </div>
-  <div class="card">
-    <h2>Status / Diagnose</h2>
-    <pre class="pre" id="status-pre">—</pre>
-  </div>
-  <div class="card">
-    <h2>Manuelle Aktionen</h2>
-    <div class="row">
-      <button class="btn btn-accent" id="cfg-scan">Force Scan</button>
-      <button class="btn" id="cfg-perimeter">Perimeter</button>
-      <button class="btn" id="cfg-threat">Threat-Intel</button>
-    </div>
-  </div>
-  <div class="card">
-    <h2>Hinweise</h2>
-    <ul class="muted" style="padding-left:1.2rem;font-size:.82rem;line-height:1.6">
-      <li>Modus <code>learning</code> → nur beobachten, keine Auto-Sperren</li>
-      <li>Modus <code>monitor</code> / <code>enforce</code> → Sperren möglich (mit Circuit-Breaker)</li>
-      <li>Whitelist + HA-Host + Gateway + Fritz-IPs sind immer geschützt</li>
-      <li>Packet-Capture braucht gültige Fritz-Zugangsdaten (SID via login_sid.lua)</li>
-    </ul>
-  </div>
-</section>
-</main>
-
-<div class="toast" id="toast"></div>
-
-<script>
-const $ = s => document.querySelector(s);
-const $$ = s => document.querySelectorAll(s);

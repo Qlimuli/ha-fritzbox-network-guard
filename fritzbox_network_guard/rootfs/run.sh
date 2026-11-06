@@ -33,16 +33,16 @@ if [ ! -f "${APP_HOME}/main.py" ]; then
   exit 1
 fi
 
-# Prefer the complete bundled ui.html (v2.2.4+). Only assemble from ui_parts
-# if the main file is missing or suspiciously small (broken previous assembly).
-UI_FILE="${APP_HOME}/ui.html"
-if [ -f "${UI_FILE}" ] && [ "$(wc -c < "${UI_FILE}")" -gt 15000 ]; then
-  bashio::log.info "Using complete ui.html ($(wc -c < "${UI_FILE}") bytes)"
-elif ls "${APP_HOME}/ui_parts"/*.html >/dev/null 2>&1; then
-  cat $(ls "${APP_HOME}/ui_parts"/*.html | sort) > "${UI_FILE}"
-  bashio::log.info "Assembled UI from ui_parts ($(wc -c < "${UI_FILE}") bytes)"
+# Always assemble from ui_parts when present (overwrites any incomplete bundled ui.html)
+if ls "${APP_HOME}/ui_parts"/*.html >/dev/null 2>&1; then
+  cat $(ls "${APP_HOME}/ui_parts"/*.html | sort) > "${APP_HOME}/ui.html"
+  SZ=$(wc -c < "${APP_HOME}/ui.html")
+  bashio::log.info "Assembled UI from ui_parts (${SZ} bytes)"
+  if [ "$SZ" -lt 10000 ]; then
+    bashio::log.warning "Assembled UI is small – parts may be incomplete"
+  fi
 else
-  bashio::log.warning "No usable UI found – pages may be empty"
+  bashio::log.info "Using bundled ui.html ($(wc -c < "${APP_HOME}/ui.html" 2>/dev/null || echo 0) bytes)"
 fi
 
 python3 - <<'PY' || true
