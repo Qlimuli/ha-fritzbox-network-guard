@@ -24,6 +24,17 @@ def _load_code() -> str:
 
 
 def _patch_safety(code: str) -> str:
+    # Ensure _insights is initialized (fixes NameError on /api/fritz/*)
+    if "_insights = None" not in code:
+        marker = "_security: SecurityEngine | None = None"
+        if marker in code:
+            code = code.replace(
+                marker,
+                marker + "\n_insights = None  # type: ignore",
+                1,
+            )
+            print("Patched: _insights = None init", file=sys.stderr)
+
     old = (
         "                    should_block = False\n"
         "                    reason = \"\"\n"
@@ -49,6 +60,47 @@ def _patch_safety(code: str) -> str:
     if old in code:
         code = code.replace(old, new, 1)
         print("Patched: auto-block only for active devices", file=sys.stderr)
+
+    old_block = '''def block_ip(ip: str, reason: str = "security alert") -> bool:
+    if not (FRITZBOX_PASSWORD or "").strip():
+        log.warning("Block %s skipped: fritzbox_password not set (401 would occur)", ip)
+        return False
+    try:
+        get_fritz().call_action(
+            "X_AVM-DE_HostFilter1",
+            "DisallowWANAccessByIP",
+            arguments={"NewIPv4Address": ip, "NewDisallow": True},
+        )
+        log.info("Blocked WAN for %s (%s)", ip, reason)
+        return True
+    except Exception as exc:
+        log.error("Block %s failed: %s", ip, exc)
+        return False'''
+    new_block = '''def block_ip(ip: str, reason: str = "security alert") -> bool:
+    if not (FRITZBOX_PASSWORD or "").strip():
+        log.warning("Block %s skipped: fritzbox_password not set (401 would occur)", ip)
+        return False
+    try:
+        get_fritz().call_action(
+            "X_AVM-DE_HostFilter1",
+            "DisallowWANAccessByIP",
+            arguments={"NewIPv4Address": ip, "NewDisallow": True},
+        )
+        log.info("Blocked WAN for %s (%s)", ip, reason)
+        return True
+    except Exception as exc:
+        msg = str(exc)
+        if "714" in msg or "NoSuchEntry" in msg:
+            log.warning("Block %s skipped (not in Fritz host list / phantom): %s", ip, reason)
+        elif "401" in msg or "Unauthorized" in msg:
+            log.error("Block %s failed: 401 Unauthorized – check fritzbox_user/password & app rights", ip)
+        else:
+            log.error("Block %s failed: %s", ip, exc)
+        return False'''
+    if old_block in code:
+        code = code.replace(old_block, new_block, 1)
+        print("Patched: soft block_ip for 714/401", file=sys.stderr)
+
     return code
 
 
@@ -81,7 +133,7 @@ def api_config_effective():
         "auto_block_threat_intel": AUTO_BLOCK_THREAT_INTEL, "critical_mac_prefixes": CRITICAL_MAC_PREFIXES,
         "deep_scan_on_new": os.getenv("DEEP_SCAN_ON_NEW", "false").lower() in ("true", "1", "yes"),
         "log_alert_notify": os.getenv("LOG_ALERT_NOTIFY", "true").lower() in ("true", "1", "yes"),
-        "version": "2.2.8",
+        "version": "2.2.9",
     })
 """
         marker = '\nif __name__ == "__main__":'
@@ -89,7 +141,7 @@ def api_config_effective():
         print("Patched: deep-scan + config", file=sys.stderr)
 
     if "/api/capture/status" not in code:
-        cap = """
+        cap = r"""
 
 _packet_cap = None
 def get_packet_capture():
@@ -180,9 +232,17 @@ def api_capture_download(name: str):
         code = code.replace(marker, cap + marker, 1) if marker in code else code + cap
         print("Patched: packet capture API", file=sys.stderr)
 
-    for a, b in [('"version": "1.5.0"', '"version": "2.2.8"'), ('"version": "2.1.0"', '"version": "2.2.8"'),
-                 ("Network Guard 2.1.0", "Network Guard 2.2.8")]:
-        code = code.replace(a, b)
+    for a, b in [
+        ('"version": "1.5.0"', '"version": "2.2.9"'),
+        ('"version": "2.1.0"', '"version": "2.2.9"'),
+        ('"version": "2.2.0"', '"version": "2.2.9"'),
+        ('"version": "2.2.3"', '"version": "2.2.9"'),
+        ("Network Guard 1.4.0", "Network Guard 2.2.9"),
+        ("Network Guard 2.1.0", "Network Guard 2.2.9"),
+        ("Network Guard 2.2.0", "Network Guard 2.2.9"),
+    ]:
+        if a in code:
+            code = code.replace(a, b)
     return code
 
 
