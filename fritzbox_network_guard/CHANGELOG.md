@@ -1,11 +1,17 @@
 # Changelog
 
+## 2.2.8 – Boot-Load Fix & robuste UI
+- Sofort-Refresh + Retries (50ms / 1.5s / 4s) damit Overview nicht auf „Verbinde…“ hängen bleibt
+- Vollständige `ui_full.gz.b64` (Single-File) wiederhergestellt und verifiziert
+- Chunks neu geschrieben und Assembly getestet
+- Dockerfile LABEL auf 2.2.8, Config-Version 2.2.8
+- SID-Login Logging bereinigt
+
 ## 2.2.7 – UI-Assembly & Laden-Fix
 - Vollständige `ui_full.gz.b64` (Single-File) wiederhergestellt
 - Fallback-`ui.html` aktualisiert
 - run.sh: Single-File nur bei >5 KB nutzen (verhindert kaputte Truncates)
 - Sofort-Status in der GUI: „Verbinde…“ + Base-Pfad sichtbar
-- Version/Badge 2.2.7
 
 ## 2.2.6 – GUI bleibt nicht mehr auf „Laden…“
 - Ingress-Base-Pfad (`__BASE__`)
