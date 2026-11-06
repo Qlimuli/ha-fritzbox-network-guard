@@ -1,5 +1,5 @@
 #!/usr/bin/with-contenv bashio
-bashio::log.info "Starting FritzBox Network Guard 2.2.5..."
+bashio::log.info "Starting FritzBox Network Guard 2.2.6..."
 
 export FRITZBOX_HOST=$(bashio::config 'fritzbox_host')
 export FRITZBOX_USER=$(bashio::config 'fritzbox_user')
@@ -58,7 +58,23 @@ def assemble_b64(pattern, dest_name):
         print(f"{dest_name} b64 assemble failed: {exp}", file=sys.stderr)
         return False
 
-ok = assemble_b64("ui_full.gz.b64.*", "ui.html")
+# try single-file first, then chunks
+ok = False
+single = p / "ui_full.gz.b64"
+if single.exists() and single.stat().st_size > 100:
+    try:
+        b64 = single.read_text().strip()
+        pad = (-len(b64)) % 4
+        if pad:
+            b64 += "=" * pad
+        data = gzip.decompress(base64.b64decode(b64))
+        (p / "ui.html").write_bytes(data)
+        print(f"Assembled ui.html from single ui_full.gz.b64 ({len(data)} bytes)", file=sys.stderr)
+        ok = True
+    except Exception as exp:
+        print(f"single ui_full.gz.b64 failed: {exp}", file=sys.stderr)
+if not ok:
+    ok = assemble_b64("ui_full.gz.b64.*", "ui.html")
 if not ok:
     parts = sorted(p.glob("ui_parts/*.html"))
     if parts:
