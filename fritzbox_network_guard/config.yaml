@@ -1,5 +1,5 @@
 name: "FritzBox Network Guard"
-version: "2.2.5"
+version: "2.2.6"
 slug: fritzbox_network_guard
 description: >-
   LAN-Scan, FritzBox Packet-Capture (Wireshark-kompatibel), Traffic-Analyse &
