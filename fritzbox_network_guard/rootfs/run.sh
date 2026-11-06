@@ -1,5 +1,5 @@
 #!/usr/bin/with-contenv bashio
-bashio::log.info "Starting FritzBox Network Guard 2.2.3..."
+bashio::log.info "Starting FritzBox Network Guard 2.2.4..."
 
 export FRITZBOX_HOST=$(bashio::config 'fritzbox_host')
 export FRITZBOX_USER=$(bashio::config 'fritzbox_user')
@@ -33,14 +33,16 @@ if [ ! -f "${APP_HOME}/main.py" ]; then
   exit 1
 fi
 
-# Assemble full GUI from plain HTML fragments (preferred over any truncated b64)
-if ls "${APP_HOME}/ui_parts"/*.html >/dev/null 2>&1; then
-  cat $(ls "${APP_HOME}/ui_parts"/*.html | sort) > "${APP_HOME}/ui.html"
-  SZ=$(wc -c < "${APP_HOME}/ui.html")
-  bashio::log.info "Assembled UI from ui_parts (${SZ} bytes)"
-  if [ "$SZ" -lt 15000 ]; then
-    bashio::log.warning "Assembled UI looks too small – check ui_parts"
-  fi
+# Prefer the complete bundled ui.html (v2.2.4+). Only assemble from ui_parts
+# if the main file is missing or suspiciously small (broken previous assembly).
+UI_FILE="${APP_HOME}/ui.html"
+if [ -f "${UI_FILE}" ] && [ "$(wc -c < "${UI_FILE}")" -gt 15000 ]; then
+  bashio::log.info "Using complete ui.html ($(wc -c < "${UI_FILE}") bytes)"
+elif ls "${APP_HOME}/ui_parts"/*.html >/dev/null 2>&1; then
+  cat $(ls "${APP_HOME}/ui_parts"/*.html | sort) > "${UI_FILE}"
+  bashio::log.info "Assembled UI from ui_parts ($(wc -c < "${UI_FILE}") bytes)"
+else
+  bashio::log.warning "No usable UI found – pages may be empty"
 fi
 
 python3 - <<'PY' || true
@@ -65,9 +67,8 @@ def assemble(pattern, dest_name):
         print(f"{dest_name} assemble failed: {exp}", file=sys.stderr)
         return False
 
-# Only use b64 UI if no ui_parts assembled file exists / empty
 ui = p / "ui.html"
-if not ui.exists() or ui.stat().st_size < 10000:
+if not ui.exists() or ui.stat().st_size < 5000:
     assemble("ui_full.gz.b64.*", "ui.html") or assemble("ui.b64.*", "ui.html")
 
 assemble("security_engine.b64.*", "security_engine.py")

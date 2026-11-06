@@ -1,5 +1,5 @@
 name: "FritzBox Network Guard"
-version: "2.2.3"
+version: "2.2.4"
 slug: fritzbox_network_guard
 description: >-
   LAN-Scan, FritzBox Packet-Capture (Wireshark-kompatibel), Traffic-Analyse &
@@ -29,7 +29,7 @@ options:
   fritzbox_password: ""
   scan_interval: 60
   network_cidr: "192.168.178.0/24"
-  critical_mac_prefixes: ""
+  critical_mac_prefixes: []
   auto_block_new_devices: false
   notify_on_block: true
   enable_perimeter_scan: true
@@ -45,7 +45,7 @@ schema:
   fritzbox_password: password
   scan_interval: int(10,3600)
   network_cidr: str
-  critical_mac_prefixes: str?
+  critical_mac_prefixes: [str]
   auto_block_new_devices: bool
   notify_on_block: bool
   enable_perimeter_scan: bool
@@ -57,9 +57,5 @@ schema:
   log_alert_notify: bool
 ingress: true
 ingress_port: 8099
-panel_icon: mdi:router-network
-panel_title: FritzBox Guard
-hassio_api: true
-hassio_role: default
-homeassistant_api: true
-auth_api: true
+panel_icon: mdi:shield-network
+panel_title: Network Guard
