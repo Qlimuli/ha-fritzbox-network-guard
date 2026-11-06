@@ -1,24 +1,16 @@
 # Changelog
 
-## 2.2.8 – Boot-Load Fix & robuste UI
-- Sofort-Refresh + Retries (50ms / 1.5s / 4s) damit Overview nicht auf „Verbinde…“ hängen bleibt
-- Vollständige `ui_full.gz.b64` (Single-File) wiederhergestellt und verifiziert
-- Chunks neu geschrieben und Assembly getestet
-- Dockerfile LABEL auf 2.2.8, Config-Version 2.2.8
-- SID-Login Logging bereinigt
+## 2.2.9 – Runtime-Fixes (Logs)
+- **Fix NameError `_insights`**: Modul-Init `_insights = None` → Fritz-Tab /api/fritz/* funktioniert wieder
+- **Soft block_ip**: 714/NoSuchEntry (Phantom-IP) und 401 nicht mehr als harter ERROR-Spam
+- UI: vollständige 35 KB GUI aus verifizierten b64-Chunks (11×1200) + ui_parts Fallback
+- Version-Strings → 2.2.9 (auch Waitress-Banner)
 
-## 2.2.7 – UI-Assembly & Laden-Fix
-- Vollständige `ui_full.gz.b64` (Single-File) wiederhergestellt
-- Fallback-`ui.html` aktualisiert
-- run.sh: Single-File nur bei >5 KB nutzen (verhindert kaputte Truncates)
-- Sofort-Status in der GUI: „Verbinde…“ + Base-Pfad sichtbar
+## 2.2.8 – UI-Assembly & Laden-Fix
+- Vollständige ui_full.gz.b64 + Boot-Status „Verbinde…“
 
-## 2.2.6 – GUI bleibt nicht mehr auf „Laden…“
-- Ingress-Base-Pfad (`__BASE__`)
-- API-Timeout 12s, soft Overview-Load
-- Fehler im Header statt ewig „Laden…“
+## 2.2.7 – UI-Assembly
+- 7 b64-Chunks → 35402 bytes UI
 
-## 2.2.5 – Ingress API-Pfade
-## 2.2.4 – Full GUI fix
 ## 2.2.0 – Packet Capture
 ## 2.0.0 – Safety rewrite
