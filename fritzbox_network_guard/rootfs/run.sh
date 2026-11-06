@@ -1,5 +1,5 @@
 #!/usr/bin/with-contenv bashio
-bashio::log.info "Starting FritzBox Network Guard 2.2.8..."
+bashio::log.info "Starting FritzBox Network Guard 2.2.9..."
 
 export FRITZBOX_HOST=$(bashio::config 'fritzbox_host')
 export FRITZBOX_USER=$(bashio::config 'fritzbox_user')
@@ -56,32 +56,34 @@ def assemble_b64(pattern, dest_name):
         return False
 
 ok = False
-single = p / "ui_full.gz.b64"
-if single.exists() and single.stat().st_size > 5000:
-    try:
-        b64 = single.read_text().strip()
-        pad = (-len(b64)) % 4
-        if pad:
-            b64 += "=" * pad
-        data = gzip.decompress(base64.b64decode(b64))
-        (p / "ui.html").write_bytes(data)
-        print(f"Assembled ui.html from single ui_full.gz.b64 ({len(data)} bytes)", file=sys.stderr)
-        ok = True
-    except Exception as exp:
-        print(f"single ui_full.gz.b64 failed: {exp}", file=sys.stderr)
+# Prefer complete ui_parts first (>=30KB) – most reliable
+parts = sorted(p.glob("ui_parts/*.html"))
+parts_data = b"".join(x.read_bytes() for x in parts) if parts else b""
+if len(parts_data) >= 30000:
+    (p / "ui.html").write_bytes(parts_data)
+    print(f"Assembled ui.html from {len(parts)} parts ({len(parts_data)} bytes)", file=sys.stderr)
+    ok = True
+if not ok:
+    single = p / "ui_full.gz.b64"
+    if single.exists() and single.stat().st_size > 5000:
+        try:
+            b64 = single.read_text().strip()
+            pad = (-len(b64)) % 4
+            if pad:
+                b64 += "=" * pad
+            data = gzip.decompress(base64.b64decode(b64))
+            (p / "ui.html").write_bytes(data)
+            print(f"Assembled ui.html from single ui_full.gz.b64 ({len(data)} bytes)", file=sys.stderr)
+            ok = True
+        except Exception as exp:
+            print(f"single ui_full.gz.b64 failed: {exp}", file=sys.stderr)
 if not ok:
     ok = assemble_b64("ui_full.gz.b64.*", "ui.html")
-if not ok:
-    parts = sorted(p.glob("ui_parts/*.html"))
-    if parts:
-        data = b"".join(x.read_bytes() for x in parts)
-        if len(data) > 10000:
-            (p / "ui.html").write_bytes(data)
-            print(f"Assembled ui.html from {len(parts)} parts ({len(data)} bytes)", file=sys.stderr)
-        else:
-            print(f"ui_parts too small ({len(data)}), keeping existing ui.html", file=sys.stderr)
-    else:
-        print("Using existing ui.html", file=sys.stderr)
+if not ok and parts and len(parts_data) > 10000:
+    (p / "ui.html").write_bytes(parts_data)
+    print(f"Assembled ui.html from {len(parts)} parts fallback ({len(parts_data)} bytes)", file=sys.stderr)
+elif not ok:
+    print("Using existing ui.html", file=sys.stderr)
 ui = p / "ui.html"
 if ui.exists():
     sz = ui.stat().st_size
