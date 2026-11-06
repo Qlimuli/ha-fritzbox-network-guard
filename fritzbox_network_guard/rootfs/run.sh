@@ -1,5 +1,5 @@
 #!/usr/bin/with-contenv bashio
-bashio::log.info "Starting FritzBox Network Guard 2.2.6..."
+bashio::log.info "Starting FritzBox Network Guard 2.2.7..."
 
 export FRITZBOX_HOST=$(bashio::config 'fritzbox_host')
 export FRITZBOX_USER=$(bashio::config 'fritzbox_user')
@@ -33,9 +33,6 @@ if [ ! -f "${APP_HOME}/main.py" ]; then
   exit 1
 fi
 
-# 1) Prefer complete UI from ui_full.gz.b64.* (most reliable for large HTML)
-# 2) Else assemble ui_parts
-# 3) Else keep bundled ui.html
 python3 - <<'PY' || true
 from pathlib import Path
 import base64, gzip, sys
@@ -58,10 +55,9 @@ def assemble_b64(pattern, dest_name):
         print(f"{dest_name} b64 assemble failed: {exp}", file=sys.stderr)
         return False
 
-# try single-file first, then chunks
 ok = False
 single = p / "ui_full.gz.b64"
-if single.exists() and single.stat().st_size > 100:
+if single.exists() and single.stat().st_size > 5000:
     try:
         b64 = single.read_text().strip()
         pad = (-len(b64)) % 4
@@ -86,7 +82,6 @@ if not ok:
             print(f"ui_parts too small ({len(data)}), keeping existing ui.html", file=sys.stderr)
     else:
         print("Using existing ui.html", file=sys.stderr)
-# never leave a tiny/broken UI
 ui = p / "ui.html"
 if ui.exists():
     sz = ui.stat().st_size
