@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.2.5 – Ingress-fähige GUI (klickbar)
+- API-Aufrufe nutzen HA-Ingress-Base-Path (`__BASE__` / `apiUrl()`), absolute `/api/*` Pfade funktionieren wieder unter Supervisor Ingress
+- Capture-Download ebenfalls relativ zum Ingress-Pfad
+- UI-Assembly robuster (keine Überschreibung mit zu kleinen Parts)
+- Vollständige Multi-Tab UI inkl. Traffic-Capture wieder interaktiv
+
 ## 2.2.4 – Full GUI fix (load + clickable)
 - Complete multi-tab UI restored as single self-contained `ui.html` (no broken partial assembly)
 - run.sh now prefers the complete ui.html (>15 KB) and only falls back to ui_parts when missing
