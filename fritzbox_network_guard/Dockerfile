@@ -42,5 +42,5 @@ LABEL \
     io.hass.name="FritzBox Network Guard" \
     io.hass.description="LAN monitor, Fritz packet capture (Wireshark-compatible), traffic analysis, WAN isolation" \
     io.hass.type="addon" \
-    io.hass.version="2.2.6" \
+    io.hass.version="2.2.8" \
     org.opencontainers.image.source="https://github.com/Qlimuli/ha-fritzbox-network-guard"
