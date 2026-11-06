@@ -1,5 +1,5 @@
 name: "FritzBox Network Guard"
-version: "2.2.4"
+version: "2.2.5"
 slug: fritzbox_network_guard
 description: >-
   LAN-Scan, FritzBox Packet-Capture (Wireshark-kompatibel), Traffic-Analyse &
@@ -29,14 +29,14 @@ options:
   fritzbox_password: ""
   scan_interval: 60
   network_cidr: "192.168.178.0/24"
-  critical_mac_prefixes: []
+  critical_mac_prefixes: ""
   auto_block_new_devices: false
   notify_on_block: true
   enable_perimeter_scan: true
   perimeter_interval: 3600
   enable_threat_intel: true
-  threat_intel_interval: 7200
-  auto_block_threat_intel: false
+  threat_intel_interval: 21600
+  auto_block_threat_intel: true
   deep_scan_on_new: false
   log_alert_notify: true
 schema:
@@ -45,17 +45,20 @@ schema:
   fritzbox_password: password
   scan_interval: int(10,3600)
   network_cidr: str
-  critical_mac_prefixes: [str]
+  critical_mac_prefixes: str?
   auto_block_new_devices: bool
   notify_on_block: bool
   enable_perimeter_scan: bool
   perimeter_interval: int(300,86400)
   enable_threat_intel: bool
-  threat_intel_interval: int(600,86400)
+  threat_intel_interval: int(3600,86400)
   auto_block_threat_intel: bool
   deep_scan_on_new: bool
   log_alert_notify: bool
+homeassistant_api: true
+hassio_api: true
 ingress: true
 ingress_port: 8099
-panel_icon: mdi:shield-network
+panel_icon: mdi:shield-lock-outline
 panel_title: Network Guard
+url: "https://github.com/Qlimuli/ha-fritzbox-network-guard"
