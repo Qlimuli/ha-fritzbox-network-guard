@@ -1,5 +1,5 @@
 #!/usr/bin/with-contenv bashio
-bashio::log.info "Starting FritzBox Network Guard 2.3.2..."
+bashio::log.info "Starting FritzBox Network Guard 2.3.3..."
 
 export FRITZBOX_HOST=$(bashio::config 'fritzbox_host')
 export FRITZBOX_USER=$(bashio::config 'fritzbox_user')
@@ -87,13 +87,12 @@ ui = p / "ui.html"
 if ui.exists():
     try:
         html = ui.read_text(encoding="utf-8", errors="replace")
-        # Always bump visible version badge
-        for oldv in ("2.2.4", "2.2.7", "2.2.8", "2.2.9", "2.3.0", "2.3.1"):
-            html = html.replace(f'id="ver-badge">{oldv}', 'id="ver-badge">2.3.2')
+        for oldv in ("2.2.4", "2.2.7", "2.2.8", "2.2.9", "2.3.0", "2.3.1", "2.3.2"):
+            html = html.replace(f'id="ver-badge">{oldv}', 'id="ver-badge">2.3.3')
         if "__BASE__" not in html or "apiUrl" not in html or "NG_POLISH" not in html:
             inject = r"""
 <script>
-/* NG_POLISH 2.3.2 – HA Ingress + native UX */
+/* NG_POLISH 2.3.3 – HA Ingress + native UX */
 window.__BASE__=(function(){try{var path=window.location.pathname||'/';var dir=path.endsWith('/')?path:path.replace(/\/[^/]*$/,'/');if(!dir||dir==='/')return'';return dir.replace(/\/$/,'');}catch(e){return'';}})();
 (function(){
   var _f=window.fetch;
@@ -102,17 +101,14 @@ window.__BASE__=(function(){try{var path=window.location.pathname||'/';var dir=p
     return _f.call(this,u,o);
   };
 })();
-/* Soft button feedback: disable briefly on click */
 document.addEventListener('click',function(ev){
   var b=ev.target.closest('button.btn');
   if(!b||b.disabled) return;
-  var prev=b.textContent;
   if(b.dataset.busy) return;
   b.dataset.busy='1';
   b.style.opacity='0.7';
   setTimeout(function(){ b.style.opacity=''; delete b.dataset.busy; }, 900);
 }, true);
-/* Prefer relative base for window.open downloads */
 (function(){
   var _open=window.open;
   window.open=function(u,t,f){
@@ -120,10 +116,9 @@ document.addEventListener('click',function(ev){
     return _open.call(this,u,t,f);
   };
 })();
-console.log('[NetworkGuard] 2.3.2 polish __BASE__=',window.__BASE__);
+console.log('[NetworkGuard] 2.3.3 polish __BASE__=',window.__BASE__);
 </script>
 <style>
-/* NG_POLISH polish */
 .btn{transition:opacity .15s,filter .15s,transform .08s}
 .btn:active{transform:scale(.98)}
 .btn:disabled,.btn[data-busy]{opacity:.65;cursor:wait}
@@ -140,7 +135,7 @@ console.log('[NetworkGuard] 2.3.2 polish __BASE__=',window.__BASE__);
             else:
                 html = inject + html
             ui.write_text(html, encoding="utf-8")
-            print(f"Patched UI polish+Ingress 2.3.2, size={len(html)}", file=sys.stderr)
+            print(f"Patched UI polish+Ingress 2.3.3, size={len(html)}", file=sys.stderr)
         else:
             ui.write_text(html, encoding="utf-8")
             print(f"UI version badge updated, size={ui.stat().st_size}", file=sys.stderr)
@@ -151,6 +146,36 @@ console.log('[NetworkGuard] 2.3.2 polish __BASE__=',window.__BASE__);
         print("WARNING: ui.html suspiciously small", file=sys.stderr)
 
 assemble_b64("security_engine.b64.*", "security_engine.py")
+
+# Harden: only active devices for IP/MAC conflict (attack surface)
+sec = p / "security_engine.py"
+if sec.exists():
+    try:
+        st = sec.read_text(encoding="utf-8", errors="replace")
+        old_fn = """def detect_ip_mac_conflict(self, devices: list[dict]) -> list[dict]:
+        by_ip: dict[str, set[str]] = {}
+        for d in devices:
+            ip, mac = d.get("ip"), (d.get("mac") or "").upper()
+            if ip and mac:
+                by_ip.setdefault(ip, set()).add(mac)"""
+        new_fn = """def detect_ip_mac_conflict(self, devices: list[dict]) -> list[dict]:
+        by_ip: dict[str, set[str]] = {}
+        for d in devices:
+            if not d.get("active"):
+                continue  # offline/phantom not relevant for live attacks
+            ip, mac = d.get("ip"), (d.get("mac") or "").upper()
+            if ip and mac:
+                by_ip.setdefault(ip, set()).add(mac)"""
+        if old_fn in st:
+            st = st.replace(old_fn, new_fn, 1)
+            sec.write_text(st, encoding="utf-8")
+            print("Patched security_engine: mac_spoof only active devices", file=sys.stderr)
+        elif "offline/phantom not relevant" in st:
+            print("security_engine already active-only for mac_spoof", file=sys.stderr)
+        else:
+            print("WARN: detect_ip_mac_conflict pattern not found", file=sys.stderr)
+    except Exception as exp:
+        print(f"security_engine active-only patch failed: {exp}", file=sys.stderr)
 PY
 
 if [ -f "${APP_HOME}/ui.html" ]; then
