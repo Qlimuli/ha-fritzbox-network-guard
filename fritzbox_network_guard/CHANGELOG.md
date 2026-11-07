@@ -1,14 +1,16 @@
 # Changelog
 
+## 2.3.2 – Polish & soft errors
+- Version-Anzeige überall 2.3.2
+- GetDeviceLogPath 401/Invalid Action → debug (kein Warning-Spam auf FRITZ!OS 7.x)
+- main.py Safety-Patches unverändert
+- Ingress-Fetch-Rewrite bleibt aktiv
+
+## 2.3.1 – Ingress 404-Fix
+- Runtime-Patch: `__BASE__` + `fetch`-Rewrite für HA Ingress
+
 ## 2.3.0 – HA Update-Erkennung
-- Root- und Addon-`config.yaml` synchron auf 2.3.0
-- Fixes aus 2.2.9: `_insights` NameError, soft block 714/401, UI-Parts-Assembly
+- Root- und Addon-config synchron
 
 ## 2.2.9 – Runtime-Fixes
-- Fix NameError `_insights` (Fritz-Tab)
-- Soft block_ip bei 714/NoSuchEntry und 401
-- run.sh priorisiert vollständige ui_parts
-
-## 2.2.8 / 2.2.7 – UI-Assembly
-## 2.2.0 – Packet Capture
-## 2.0.0 – Safety rewrite
+- `_insights` NameError, soft block 714/401
