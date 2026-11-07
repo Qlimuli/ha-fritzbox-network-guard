@@ -1,5 +1,5 @@
 #!/usr/bin/with-contenv bashio
-bashio::log.info "Starting FritzBox Network Guard 2.3.3..."
+bashio::log.info "Starting FritzBox Network Guard 2.3.4..."
 
 export FRITZBOX_HOST=$(bashio::config 'fritzbox_host')
 export FRITZBOX_USER=$(bashio::config 'fritzbox_user')
@@ -82,43 +82,27 @@ if not ok and parts and len(parts_data) > 10000:
     (p / "ui.html").write_bytes(parts_data)
     print(f"Assembled ui.html from {len(parts)} parts fallback ({len(parts_data)} bytes)", file=sys.stderr)
 
-# --- UI polish: Ingress base + native feel ---
+# --- UI polish: Ingress + vertical lists ---
 ui = p / "ui.html"
 if ui.exists():
     try:
         html = ui.read_text(encoding="utf-8", errors="replace")
-        for oldv in ("2.2.4", "2.2.7", "2.2.8", "2.2.9", "2.3.0", "2.3.1", "2.3.2"):
-            html = html.replace(f'id="ver-badge">{oldv}', 'id="ver-badge">2.3.3')
-        if "__BASE__" not in html or "apiUrl" not in html or "NG_POLISH" not in html:
+        for oldv in ("2.2.4", "2.2.7", "2.2.8", "2.2.9", "2.3.0", "2.3.1", "2.3.2", "2.3.3"):
+            html = html.replace(f'id="ver-badge">{oldv}', 'id="ver-badge">2.3.4')
+        need = ("__BASE__" not in html or "apiUrl" not in html or "NG_POLISH" not in html
+                or "device-list,#blocked-list" not in html)
+        if need:
             inject = r"""
 <script>
-/* NG_POLISH 2.3.3 – HA Ingress + native UX */
+/* NG_POLISH 2.3.4 – HA Ingress + vertical lists */
 window.__BASE__=(function(){try{var path=window.location.pathname||'/';var dir=path.endsWith('/')?path:path.replace(/\/[^/]*$/,'/');if(!dir||dir==='/')return'';return dir.replace(/\/$/,'');}catch(e){return'';}})();
-(function(){
-  var _f=window.fetch;
-  window.fetch=function(u,o){
-    if(typeof u==='string'&&u.startsWith('/api/')) u=(window.__BASE__||'')+u;
-    return _f.call(this,u,o);
-  };
-})();
-document.addEventListener('click',function(ev){
-  var b=ev.target.closest('button.btn');
-  if(!b||b.disabled) return;
-  if(b.dataset.busy) return;
-  b.dataset.busy='1';
-  b.style.opacity='0.7';
-  setTimeout(function(){ b.style.opacity=''; delete b.dataset.busy; }, 900);
-}, true);
-(function(){
-  var _open=window.open;
-  window.open=function(u,t,f){
-    if(typeof u==='string'&&u.startsWith('/api/')) u=(window.__BASE__||'')+u;
-    return _open.call(this,u,t,f);
-  };
-})();
-console.log('[NetworkGuard] 2.3.3 polish __BASE__=',window.__BASE__);
+(function(){var _f=window.fetch;window.fetch=function(u,o){if(typeof u==='string'&&u.startsWith('/api/'))u=(window.__BASE__||'')+u;return _f.call(this,u,o);};})();
+document.addEventListener('click',function(ev){var b=ev.target.closest('button.btn');if(!b||b.disabled||b.dataset.busy)return;b.dataset.busy='1';b.style.opacity='0.7';setTimeout(function(){b.style.opacity='';delete b.dataset.busy;},900);},true);
+(function(){var _open=window.open;window.open=function(u,t,f){if(typeof u==='string'&&u.startsWith('/api/'))u=(window.__BASE__||'')+u;return _open.call(this,u,t,f);};})();
+console.log('[NetworkGuard] 2.3.4 polish __BASE__=',window.__BASE__);
 </script>
 <style>
+/* NG_POLISH 2.3.4 */
 .btn{transition:opacity .15s,filter .15s,transform .08s}
 .btn:active{transform:scale(.98)}
 .btn:disabled,.btn[data-busy]{opacity:.65;cursor:wait}
@@ -128,6 +112,19 @@ console.log('[NetworkGuard] 2.3.3 polish __BASE__=',window.__BASE__);
 #status-badges .badge{animation:ngFade .25s ease}
 @keyframes ngFade{from{opacity:0;transform:translateY(-2px)}to{opacity:1;transform:none}}
 .empty{min-height:3rem;display:flex;align-items:center;justify-content:center}
+/* Lists: always top-to-bottom, full width */
+#device-list,#blocked-list,#wl-list,#cap-list,#sec-events,#overview-events{
+  display:flex!important;flex-direction:column!important;flex-wrap:nowrap!important;
+  gap:.5rem;width:100%;align-items:stretch;
+}
+#device-list>.card,#device-list>.device-card,
+#blocked-list>.card,#blocked-list>.device-card,
+#wl-list>*,#cap-list>*,#sec-events>*,#overview-events>*{
+  display:block!important;width:100%!important;max-width:100%;flex:0 0 auto;
+  box-sizing:border-box;
+}
+.device-card{display:block;width:100%;margin-bottom:.5rem}
+.card>.row{width:100%}
 </style>
 """
             if "</head>" in html:
@@ -135,7 +132,7 @@ console.log('[NetworkGuard] 2.3.3 polish __BASE__=',window.__BASE__);
             else:
                 html = inject + html
             ui.write_text(html, encoding="utf-8")
-            print(f"Patched UI polish+Ingress 2.3.3, size={len(html)}", file=sys.stderr)
+            print(f"Patched UI polish+Ingress 2.3.4 (vertical lists), size={len(html)}", file=sys.stderr)
         else:
             ui.write_text(html, encoding="utf-8")
             print(f"UI version badge updated, size={ui.stat().st_size}", file=sys.stderr)
