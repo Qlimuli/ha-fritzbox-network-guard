@@ -96,12 +96,11 @@ def _patch_safety(code: str) -> str:
         elif "401" in msg or "Unauthorized" in msg:
             log.error("Block %s failed: 401 Unauthorized – check fritzbox_user/password & app rights", ip)
         else:
-            log.error("Block %s failed: %s", ip, exc)
+            log.error("Block %s failed: %s", ip, exp)
         return False'''
     if old_block in code:
         code = code.replace(old_block, new_block, 1)
         print("Patched: soft block_ip for 714/401", file=sys.stderr)
-
 
     # Demote GetDeviceLogPath failures (common on FRITZ!OS 7.x when action unsupported)
     code = code.replace(
@@ -114,6 +113,15 @@ def _patch_safety(code: str) -> str:
     )
     if "X_AVM-DE_GetDeviceLogPath" in code:
         print("Patched: soft GetDeviceLogPath logging", file=sys.stderr)
+
+    # Only evaluate IP/MAC conflicts on *active* devices (live attack surface)
+    if 'sec.detect_ip_mac_conflict(device_list)' in code:
+        code = code.replace(
+            'sec.detect_ip_mac_conflict(device_list)',
+            'sec.detect_ip_mac_conflict([d for d in device_list if d.get("active")])',
+            1,
+        )
+        print("Patched: mac_spoof only for active devices", file=sys.stderr)
 
     return code
 
@@ -147,7 +155,7 @@ def api_config_effective():
         "auto_block_threat_intel": AUTO_BLOCK_THREAT_INTEL, "critical_mac_prefixes": CRITICAL_MAC_PREFIXES,
         "deep_scan_on_new": os.getenv("DEEP_SCAN_ON_NEW", "false").lower() in ("true", "1", "yes"),
         "log_alert_notify": os.getenv("LOG_ALERT_NOTIFY", "true").lower() in ("true", "1", "yes"),
-        "version": "2.3.2",
+        "version": "2.3.3",
     })
 """
         marker = '\nif __name__ == "__main__":'
@@ -247,15 +255,17 @@ def api_capture_download(name: str):
         print("Patched: packet capture API", file=sys.stderr)
 
     for a, b in [
-        ('"version": "1.5.0"', '"version": "2.3.2"'),
-        ('"version": "2.1.0"', '"version": "2.3.2"'),
-        ('"version": "2.2.0"', '"version": "2.3.2"'),
-        ('"version": "2.2.3"', '"version": "2.3.2"'),
-        ('"version": "2.2.9"', '"version": "2.3.2"'),
-        ("Network Guard 1.4.0", "Network Guard 2.3.2"),
-        ("Network Guard 2.1.0", "Network Guard 2.3.2"),
-        ("Network Guard 2.2.0", "Network Guard 2.3.2"),
-        ("Network Guard 2.2.9", "Network Guard 2.3.2"),
+        ('"version": "1.5.0"', '"version": "2.3.3"'),
+        ('"version": "2.1.0"', '"version": "2.3.3"'),
+        ('"version": "2.2.0"', '"version": "2.3.3"'),
+        ('"version": "2.2.3"', '"version": "2.3.3"'),
+        ('"version": "2.2.9"', '"version": "2.3.3"'),
+        ('"version": "2.3.2"', '"version": "2.3.3"'),
+        ("Network Guard 1.4.0", "Network Guard 2.3.3"),
+        ("Network Guard 2.1.0", "Network Guard 2.3.3"),
+        ("Network Guard 2.2.0", "Network Guard 2.3.3"),
+        ("Network Guard 2.2.9", "Network Guard 2.3.3"),
+        ("Network Guard 2.3.2", "Network Guard 2.3.3"),
     ]:
         if a in code:
             code = code.replace(a, b)
