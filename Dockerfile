@@ -19,7 +19,6 @@ RUN pip3 install --no-cache-dir \
     waitress \
     requests
 
-# Copy entire rootfs: run.sh -> /run.sh, app/* -> /opt/network-guard/
 COPY rootfs/run.sh /run.sh
 COPY rootfs/app/ ${APP_HOME}/
 
@@ -35,5 +34,5 @@ LABEL \
     io.hass.name="FritzBox Network Guard" \
     io.hass.description="Network scanner + FritzBox IP blacklist / isolation + SecurityEngine" \
     io.hass.type="addon" \
-    io.hass.version="1.3.3" \
+    io.hass.version="2.3.4" \
     org.opencontainers.image.source="https://github.com/Qlimuli/ha-fritzbox-network-guard"
