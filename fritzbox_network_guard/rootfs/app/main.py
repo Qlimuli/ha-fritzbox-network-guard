@@ -61,6 +61,7 @@ def _patch_safety(code: str) -> str:
         code = code.replace(old, new, 1)
         print("Patched: auto-block only for active devices", file=sys.stderr)
 
+    # Soften block_ip: treat 714/NoSuchEntry and 401 as non-fatal
     old_block = '''def block_ip(ip: str, reason: str = "security alert") -> bool:
     if not (FRITZBOX_PASSWORD or "").strip():
         log.warning("Block %s skipped: fritzbox_password not set (401 would occur)", ip)
@@ -101,6 +102,19 @@ def _patch_safety(code: str) -> str:
         code = code.replace(old_block, new_block, 1)
         print("Patched: soft block_ip for 714/401", file=sys.stderr)
 
+
+    # Demote GetDeviceLogPath failures (common on FRITZ!OS 7.x when action unsupported)
+    code = code.replace(
+        'log.warning("X_AVM-DE_GetDeviceLogPath failed',
+        'log.debug("X_AVM-DE_GetDeviceLogPath skipped',
+    )
+    code = code.replace(
+        'log.error("X_AVM-DE_GetDeviceLogPath failed',
+        'log.debug("X_AVM-DE_GetDeviceLogPath skipped',
+    )
+    if "X_AVM-DE_GetDeviceLogPath" in code:
+        print("Patched: soft GetDeviceLogPath logging", file=sys.stderr)
+
     return code
 
 
@@ -133,7 +147,7 @@ def api_config_effective():
         "auto_block_threat_intel": AUTO_BLOCK_THREAT_INTEL, "critical_mac_prefixes": CRITICAL_MAC_PREFIXES,
         "deep_scan_on_new": os.getenv("DEEP_SCAN_ON_NEW", "false").lower() in ("true", "1", "yes"),
         "log_alert_notify": os.getenv("LOG_ALERT_NOTIFY", "true").lower() in ("true", "1", "yes"),
-        "version": "2.2.9",
+        "version": "2.3.2",
     })
 """
         marker = '\nif __name__ == "__main__":'
@@ -172,7 +186,7 @@ def get_packet_capture():
                 if sid and sid != "0000000000000000":
                     return sid
             except Exception as exc:
-                log.warning("web SID login failed: %s", exc)
+                log.warning("web SID login failed: %s", exp)
             return None
         _packet_cap = PacketCapture(host=FRITZBOX_HOST, password=FRITZBOX_PASSWORD, user=FRITZBOX_USER, get_sid=_web_sid)
     return _packet_cap
@@ -233,13 +247,15 @@ def api_capture_download(name: str):
         print("Patched: packet capture API", file=sys.stderr)
 
     for a, b in [
-        ('"version": "1.5.0"', '"version": "2.2.9"'),
-        ('"version": "2.1.0"', '"version": "2.2.9"'),
-        ('"version": "2.2.0"', '"version": "2.2.9"'),
-        ('"version": "2.2.3"', '"version": "2.2.9"'),
-        ("Network Guard 1.4.0", "Network Guard 2.2.9"),
-        ("Network Guard 2.1.0", "Network Guard 2.2.9"),
-        ("Network Guard 2.2.0", "Network Guard 2.2.9"),
+        ('"version": "1.5.0"', '"version": "2.3.2"'),
+        ('"version": "2.1.0"', '"version": "2.3.2"'),
+        ('"version": "2.2.0"', '"version": "2.3.2"'),
+        ('"version": "2.2.3"', '"version": "2.3.2"'),
+        ('"version": "2.2.9"', '"version": "2.3.2"'),
+        ("Network Guard 1.4.0", "Network Guard 2.3.2"),
+        ("Network Guard 2.1.0", "Network Guard 2.3.2"),
+        ("Network Guard 2.2.0", "Network Guard 2.3.2"),
+        ("Network Guard 2.2.9", "Network Guard 2.3.2"),
     ]:
         if a in code:
             code = code.replace(a, b)
