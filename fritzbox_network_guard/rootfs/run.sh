@@ -1,5 +1,5 @@
 #!/usr/bin/with-contenv bashio
-bashio::log.info "Starting FritzBox Network Guard 2.3.0..."
+bashio::log.info "Starting FritzBox Network Guard 2.3.1..."
 
 export FRITZBOX_HOST=$(bashio::config 'fritzbox_host')
 export FRITZBOX_USER=$(bashio::config 'fritzbox_user')
@@ -56,7 +56,6 @@ def assemble_b64(pattern, dest_name):
         return False
 
 ok = False
-# Prefer complete ui_parts first (>=30KB) – most reliable
 parts = sorted(p.glob("ui_parts/*.html"))
 parts_data = b"".join(x.read_bytes() for x in parts) if parts else b""
 if len(parts_data) >= 30000:
@@ -82,13 +81,35 @@ if not ok:
 if not ok and parts and len(parts_data) > 10000:
     (p / "ui.html").write_bytes(parts_data)
     print(f"Assembled ui.html from {len(parts)} parts fallback ({len(parts_data)} bytes)", file=sys.stderr)
-elif not ok:
-    print("Using existing ui.html", file=sys.stderr)
+
+# --- Ingress 404 fix: inject __BASE__ + fetch rewrite if missing ---
 ui = p / "ui.html"
 if ui.exists():
-    sz = ui.stat().st_size
-    print(f"UI file size: {sz}", file=sys.stderr)
-    if sz < 10000:
+    try:
+        html = ui.read_text(encoding="utf-8", errors="replace")
+        if "__BASE__" not in html or "apiUrl" not in html:
+            inject = r"""
+<script>
+/* HA Ingress fix: prefix /api/* with base path under /api/hassio_ingress/<token>/ */
+window.__BASE__=(function(){try{var path=window.location.pathname||'/';var dir=path.endsWith('/')?path:path.replace(/\/[^/]*$/,'/');if(!dir||dir==='/')return'';return dir.replace(/\/$/,'');}catch(e){return'';}})();
+(function(){var _f=window.fetch;window.fetch=function(u,o){if(typeof u==='string'&&u.startsWith('/api/'))u=(window.__BASE__||'')+u;return _f.call(this,u,o);};})();
+console.log('[NetworkGuard] Ingress patch __BASE__=',window.__BASE__);
+</script>
+"""
+            if "</head>" in html:
+                html = html.replace("</head>", inject + "\n</head>", 1)
+            else:
+                html = inject + html
+            html = html.replace('id="ver-badge">2.2.4', 'id="ver-badge">2.3.1')
+            html = html.replace('id="ver-badge">2.2.7', 'id="ver-badge">2.3.1')
+            ui.write_text(html, encoding="utf-8")
+            print(f"Patched UI for Ingress (__BASE__/fetch rewrite), size={len(html)}", file=sys.stderr)
+        else:
+            print(f"UI already has Ingress support, size={ui.stat().st_size}", file=sys.stderr)
+    except Exception as exp:
+        print(f"UI ingress patch failed: {exp}", file=sys.stderr)
+    print(f"UI file size: {ui.stat().st_size}", file=sys.stderr)
+    if ui.stat().st_size < 10000:
         print("WARNING: ui.html suspiciously small", file=sys.stderr)
 
 assemble_b64("security_engine.b64.*", "security_engine.py")
