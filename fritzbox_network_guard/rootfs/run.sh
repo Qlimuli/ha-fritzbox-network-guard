@@ -1,5 +1,5 @@
 #!/usr/bin/with-contenv bashio
-bashio::log.info "Starting FritzBox Network Guard 2.3.1..."
+bashio::log.info "Starting FritzBox Network Guard 2.3.2..."
 
 export FRITZBOX_HOST=$(bashio::config 'fritzbox_host')
 export FRITZBOX_USER=$(bashio::config 'fritzbox_user')
@@ -82,32 +82,70 @@ if not ok and parts and len(parts_data) > 10000:
     (p / "ui.html").write_bytes(parts_data)
     print(f"Assembled ui.html from {len(parts)} parts fallback ({len(parts_data)} bytes)", file=sys.stderr)
 
-# --- Ingress 404 fix: inject __BASE__ + fetch rewrite if missing ---
+# --- UI polish: Ingress base + native feel ---
 ui = p / "ui.html"
 if ui.exists():
     try:
         html = ui.read_text(encoding="utf-8", errors="replace")
-        if "__BASE__" not in html or "apiUrl" not in html:
+        # Always bump visible version badge
+        for oldv in ("2.2.4", "2.2.7", "2.2.8", "2.2.9", "2.3.0", "2.3.1"):
+            html = html.replace(f'id="ver-badge">{oldv}', 'id="ver-badge">2.3.2')
+        if "__BASE__" not in html or "apiUrl" not in html or "NG_POLISH" not in html:
             inject = r"""
 <script>
-/* HA Ingress fix: prefix /api/* with base path under /api/hassio_ingress/<token>/ */
+/* NG_POLISH 2.3.2 – HA Ingress + native UX */
 window.__BASE__=(function(){try{var path=window.location.pathname||'/';var dir=path.endsWith('/')?path:path.replace(/\/[^/]*$/,'/');if(!dir||dir==='/')return'';return dir.replace(/\/$/,'');}catch(e){return'';}})();
-(function(){var _f=window.fetch;window.fetch=function(u,o){if(typeof u==='string'&&u.startsWith('/api/'))u=(window.__BASE__||'')+u;return _f.call(this,u,o);};})();
-console.log('[NetworkGuard] Ingress patch __BASE__=',window.__BASE__);
+(function(){
+  var _f=window.fetch;
+  window.fetch=function(u,o){
+    if(typeof u==='string'&&u.startsWith('/api/')) u=(window.__BASE__||'')+u;
+    return _f.call(this,u,o);
+  };
+})();
+/* Soft button feedback: disable briefly on click */
+document.addEventListener('click',function(ev){
+  var b=ev.target.closest('button.btn');
+  if(!b||b.disabled) return;
+  var prev=b.textContent;
+  if(b.dataset.busy) return;
+  b.dataset.busy='1';
+  b.style.opacity='0.7';
+  setTimeout(function(){ b.style.opacity=''; delete b.dataset.busy; }, 900);
+}, true);
+/* Prefer relative base for window.open downloads */
+(function(){
+  var _open=window.open;
+  window.open=function(u,t,f){
+    if(typeof u==='string'&&u.startsWith('/api/')) u=(window.__BASE__||'')+u;
+    return _open.call(this,u,t,f);
+  };
+})();
+console.log('[NetworkGuard] 2.3.2 polish __BASE__=',window.__BASE__);
 </script>
+<style>
+/* NG_POLISH polish */
+.btn{transition:opacity .15s,filter .15s,transform .08s}
+.btn:active{transform:scale(.98)}
+.btn:disabled,.btn[data-busy]{opacity:.65;cursor:wait}
+.stat .value{font-variant-numeric:tabular-nums}
+.card{transition:border-color .15s}
+.nav-item,.tab{transition:color .12s,background .12s}
+#status-badges .badge{animation:ngFade .25s ease}
+@keyframes ngFade{from{opacity:0;transform:translateY(-2px)}to{opacity:1;transform:none}}
+.empty{min-height:3rem;display:flex;align-items:center;justify-content:center}
+</style>
 """
             if "</head>" in html:
                 html = html.replace("</head>", inject + "\n</head>", 1)
             else:
                 html = inject + html
-            html = html.replace('id="ver-badge">2.2.4', 'id="ver-badge">2.3.1')
-            html = html.replace('id="ver-badge">2.2.7', 'id="ver-badge">2.3.1')
             ui.write_text(html, encoding="utf-8")
-            print(f"Patched UI for Ingress (__BASE__/fetch rewrite), size={len(html)}", file=sys.stderr)
+            print(f"Patched UI polish+Ingress 2.3.2, size={len(html)}", file=sys.stderr)
         else:
-            print(f"UI already has Ingress support, size={ui.stat().st_size}", file=sys.stderr)
+            ui.write_text(html, encoding="utf-8")
+            print(f"UI version badge updated, size={ui.stat().st_size}", file=sys.stderr)
     except Exception as exp:
-        print(f"UI ingress patch failed: {exp}", file=sys.stderr)
+        print(f"UI patch failed: {exp}", file=sys.stderr)
     print(f"UI file size: {ui.stat().st_size}", file=sys.stderr)
     if ui.stat().st_size < 10000:
         print("WARNING: ui.html suspiciously small", file=sys.stderr)
