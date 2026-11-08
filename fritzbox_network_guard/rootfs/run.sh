@@ -28,12 +28,16 @@ fi
 
 python3 - <<'PY' || true
 from pathlib import Path
-import base64, gzip, sys, urllib.request
+import base64, gzip, sys
 
 p = Path("/opt/network-guard")
 ui = p / "ui.html"
 
-parts = sorted([x for x in p.glob("ui.html.gz.b64*") if x.is_file() and x.stat().st_size > 0], key=lambda x: x.name)
+# Only numbered chunks ui.html.gz.b64.00 .. (ignore broken placeholder ui.html.gz.b64)
+parts = sorted(
+    [x for x in p.glob("ui.html.gz.b64.[0-9]*") if x.is_file() and x.stat().st_size > 100],
+    key=lambda x: x.name,
+)
 if parts:
     try:
         raw = "".join(x.read_text().strip() for x in parts)
@@ -44,76 +48,20 @@ if parts:
         if len(data) > 5000:
             ui.write_bytes(data)
             print(f"Decoded ui.html from {len(parts)} chunk(s) ({len(data)} bytes)", file=sys.stderr)
+        else:
+            print(f"Decoded UI too small ({len(data)}), ignored", file=sys.stderr)
     except Exception as exp:
         print(f"ui chunk decode failed: {exp}", file=sys.stderr)
+else:
+    print("No UI chunks found", file=sys.stderr)
 
-if (not ui.exists()) or ui.stat().st_size < 5000:
-    urls = [
-        "https://raw.githubusercontent.com/Qlimuli/ha-fritzbox-network-guard/4fa1a8c5c0d55126c13ffeabd1b9f603ce2d8566/fritzbox_network_guard/rootfs/app/ui.html",
-        "https://cdn.jsdelivr.net/gh/Qlimuli/ha-fritzbox-network-guard@4fa1a8c5c0d55126c13ffeabd1b9f603ce2d8566/fritzbox_network_guard/rootfs/app/ui.html",
-    ]
-    for url in urls:
-        try:
-            with urllib.request.urlopen(url, timeout=20) as r:
-                data = r.read()
-            if len(data) > 5000:
-                ui.write_bytes(data)
-                print(f"Restored ui.html from GitHub ({len(data)} bytes)", file=sys.stderr)
-                break
-        except Exception as exp:
-            print(f"UI restore failed: {exp}", file=sys.stderr)
-
-if ui.exists() and ui.stat().st_size > 5000:
-    try:
-        html = ui.read_text(encoding="utf-8", errors="replace")
-        changed = False
-        if '.replace(/&/g,"&")' in html:
-            html = html.replace(
-                '.replace(/&/g,"&").replace(/</g,"<").replace(/>/g,">").replace(/"/g,""").replace(/\'/g,"&#39;")',
-                '.replace(/&/g,"&").replace(/</g,"<").replace(/>/g,">").replace(/"/g,""").replace(/\'/g,"&#39;")'
-            )
-            changed = True
-        marker = "/* NG_BUTTON_FIX_v241 */"
-        if marker not in html and "</script>" in html:
-            inject = r'''
-/* NG_BUTTON_FIX_v241 */
-(function(){
-  document.addEventListener("click", function(ev){
-    var el = ev.target && ev.target.closest ? ev.target.closest("[data-tab],[data-filter],[data-sev],[data-block],[data-unblock],[data-wl],[data-wl-toggle],[data-cap-dl],[data-cap-an],[data-cap-del],button.btn,button.chip,button.nav-item,.side-nav button") : null;
-    if(!el) return;
-    if(el.dataset && (el.dataset.block||el.dataset.unblock||el.dataset.wl||el.dataset.wlToggle||el.dataset.capDl||el.dataset.capAn||el.dataset.capDel||el.dataset.tab||el.dataset.filter||el.dataset.sev)){
-      if(ev.target !== el){
-        try { Object.defineProperty(ev, "target", {configurable:true, value:el}); } catch(_){}
-      }
-    }
-  }, true);
-  document.addEventListener("pointerdown", function(ev){
-    var b = ev.target && ev.target.closest ? ev.target.closest("button,.btn,.chip,.nav-item") : null;
-    if(b) b.style.filter="brightness(.9)";
-  }, true);
-  document.addEventListener("pointerup", function(ev){
-    var b = ev.target && ev.target.closest ? ev.target.closest("button,.btn,.chip,.nav-item") : null;
-    if(b) b.style.filter="";
-  }, true);
-  document.addEventListener("pointercancel", function(ev){
-    var b = ev.target && ev.target.closest ? ev.target.closest("button,.btn,.chip,.nav-item") : null;
-    if(b) b.style.filter="";
-  }, true);
-  console.log("[NetworkGuard] button reliability patch v2.4.1 active");
-})();
-'''
-            html = html.replace("</script>", inject + "\n</script>", 1)
-            changed = True
-        if changed:
-            ui.write_text(html, encoding="utf-8")
-            print(f"Patched ui.html for reliable buttons ({ui.stat().st_size} bytes)", file=sys.stderr)
-        else:
-            print(f"UI ready ({ui.stat().st_size} bytes)", file=sys.stderr)
-    except Exception as exp:
-        print(f"UI patch failed: {exp}", file=sys.stderr)
+if ui.exists():
+    print(f"UI file size: {ui.stat().st_size}", file=sys.stderr)
+else:
+    print("WARNING: ui.html missing", file=sys.stderr)
 
 def assemble_b64(pattern, dest_name):
-    chunks = sorted(p.glob(pattern))
+    chunks = sorted([c for c in p.glob(pattern) if c.stat().st_size > 0])
     if not chunks:
         return False
     try:
@@ -142,8 +90,6 @@ if sec.exists():
                 print("Patched security_engine active-only", file=sys.stderr)
     except Exception as exp:
         print(f"security patch failed: {exp}", file=sys.stderr)
-
-print(f"Final ui.html size: {ui.stat().st_size if ui.exists() else 0}", file=sys.stderr)
 PY
 
 if [ -f "${APP_HOME}/ui.html" ]; then
