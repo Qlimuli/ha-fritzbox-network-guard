@@ -1,5 +1,14 @@
 # Changelog
 
+## 2.4.2 – Update-Erkennung + UI-JS-Fix
+- JS-Syntaxfehler in esc() behoben – Buttons und Tabs reagieren wieder
+- Bottom-Navigation: Touch/Icons zuverlässig (pointer-events, touchend)
+- Version-Bump in config.yaml + Dockerfile (root und Add-on-Ordner)
+
+## 2.4.1 – Button-Zuverlässigkeit
+- Event-Delegation mit closest() für dynamische Aktionen
+- UI-Auslieferung über nummerierte Chunks
+
 ## 2.4.0 – Komplett neue Oberfläche
 - Neue selbstenthaltene Web-UI (Deutsch, responsive)
 - Desktop-Sidebar (>900px), Bottom-Navigation auf dem Handy
