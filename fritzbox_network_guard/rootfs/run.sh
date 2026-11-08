@@ -33,25 +33,11 @@ if [ ! -f "${APP_HOME}/main.py" ]; then
   exit 1
 fi
 
+# security_engine from b64 + active-only mac_spoof patch (UI is static ui.html)
 python3 - <<'PY' || true
 from pathlib import Path
 import base64, gzip, sys
 p = Path("/opt/network-guard")
-
-# Decode UI payload (ui.html.gz.b64 / .0 .1) – no NG_POLISH, no multi-html-parts
-parts = sorted(p.glob("ui.html.gz.b64*"))
-parts = [x for x in parts if x.name.startswith("ui.html.gz.b64")]
-if parts:
-    try:
-        raw = "".join(x.read_text().strip() for x in parts)
-        pad = (-len(raw)) % 4
-        if pad:
-            raw += "=" * pad
-        data = gzip.decompress(base64.b64decode(raw))
-        (p / "ui.html").write_bytes(data)
-        print(f"Decoded ui.html from {len(parts)} payload file(s) ({len(data)} bytes)", file=sys.stderr)
-    except Exception as exp:
-        print(f"ui.html payload decode failed: {exp}", file=sys.stderr)
 
 def assemble_b64(pattern, dest_name):
     chunks = sorted(p.glob(pattern))
