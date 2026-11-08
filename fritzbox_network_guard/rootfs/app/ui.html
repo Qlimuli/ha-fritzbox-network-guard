@@ -2,603 +2,567 @@
 <html lang="de">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#0b1220">
+<meta name="color-scheme" content="dark light">
 <title>FritzBox Network Guard</title>
 <style>
-:root{
-  --bg:#0b1220;--panel:#111827;--card:#1a2332;--border:#243044;
-  --text:#e5eefb;--muted:#8b9bb4;--accent:#38bdf8;
-  --ok:#22c55e;--warn:#f59e0b;--danger:#ef4444;--crit:#a855f7;
-  --radius:12px;--touch:44px;
+:root, [data-theme="dark"] {
+  --bg:#0b1220; --panel:#111827; --card:#1a2332; --border:#243044;
+  --text:#e5eefb; --muted:#8b9bb4; --accent:#38bdf8;
+  --ok:#22c55e; --warn:#f59e0b; --danger:#ef4444; --crit:#a855f7;
+  --radius:12px; --touch:44px; --shadow:0 4px 24px rgba(0,0,0,.35);
   --safe-top:env(safe-area-inset-top,0px);
   --safe-bottom:env(safe-area-inset-bottom,0px);
+  --sidebar-w:220px;
 }
-*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
-html{height:100%;-webkit-text-size-adjust:100%}
-body{
-  font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,sans-serif;
-  background:var(--bg);color:var(--text);line-height:1.45;
-  min-height:100%;min-height:100dvh;
-  padding-bottom:calc(4.8rem + var(--safe-bottom));
+[data-theme="light"] {
+  --bg:#f1f5f9; --panel:#ffffff; --card:#ffffff; --border:#e2e8f0;
+  --text:#0f172a; --muted:#64748b; --accent:#0284c7;
+  --ok:#16a34a; --warn:#d97706; --danger:#dc2626; --crit:#7c3aed;
+  --shadow:0 4px 20px rgba(15,23,42,.08);
 }
-header{
-  display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;
-  gap:.75rem;padding:calc(.9rem + var(--safe-top)) 1rem .9rem;
-  border-bottom:1px solid var(--border);
-  background:linear-gradient(180deg,#121a2b,var(--bg));
-  position:sticky;top:0;z-index:20;
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration:0.01ms !important; transition-duration:0.01ms !important; }
 }
-header h1{font-size:1.15rem;font-weight:700;display:flex;align-items:center;gap:.45rem}
-header .sub{color:var(--muted);font-size:.8rem;margin-top:.15rem}
-.badge{font-size:.7rem;padding:.25rem .55rem;border-radius:999px;font-weight:600;white-space:nowrap}
-.badge-ok{background:#14532d;color:#86efac}
-.badge-warn{background:#78350f;color:#fcd34d}
-.badge-danger{background:#7f1d1d;color:#fca5a5}
-.badge-muted{background:#1e293b;color:var(--muted)}
-.badge-crit{background:#4c1d95;color:#e9d5ff}
-.badge-accent{background:#0c4a6e;color:#7dd3fc}
+* { box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent; }
+html { height:100%; -webkit-text-size-adjust:100%; }
+body {
+  font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background:var(--bg); color:var(--text); line-height:1.45;
+  min-height:100%; min-height:100dvh;
+}
+button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, [tabindex]:focus-visible {
+  outline:2px solid var(--accent); outline-offset:2px;
+}
+.layout { display:flex; min-height:100dvh; }
+.sidebar {
+  display:none; width:var(--sidebar-w); flex-shrink:0;
+  background:var(--panel); border-right:1px solid var(--border);
+  flex-direction:column; padding:1rem .75rem;
+  position:sticky; top:0; height:100dvh;
+}
+.sidebar .brand { padding:.5rem .75rem 1.25rem; }
+.sidebar .brand h1 { font-size:1.05rem; font-weight:700; display:flex; align-items:center; gap:.4rem; }
+.sidebar .brand .sub { font-size:.72rem; color:var(--muted); margin-top:.2rem; }
+.side-nav { display:flex; flex-direction:column; gap:.2rem; flex:1; }
+.side-nav button {
+  display:flex; align-items:center; gap:.55rem; width:100%;
+  padding:.65rem .75rem; border:none; border-radius:10px;
+  background:transparent; color:var(--muted); font-size:.85rem; font-weight:600;
+  cursor:pointer; text-align:left; min-height:var(--touch);
+}
+.side-nav button:hover { background:var(--card); color:var(--text); }
+.side-nav button.active { background:var(--card); color:var(--accent); }
+.side-nav .ico { font-size:1.1rem; width:1.4rem; text-align:center; }
+.sidebar .foot { padding:.75rem; border-top:1px solid var(--border); margin-top:auto; }
+.main { flex:1; min-width:0; display:flex; flex-direction:column; }
+.topbar {
+  display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between;
+  gap:.75rem; padding:calc(.85rem + var(--safe-top)) 1rem .85rem;
+  border-bottom:1px solid var(--border); background:var(--panel);
+  position:sticky; top:0; z-index:20;
+}
+.topbar h1 { font-size:1.1rem; font-weight:700; display:flex; align-items:center; gap:.4rem; }
+.topbar .sub { font-size:.75rem; color:var(--muted); }
+.badge {
+  font-size:.68rem; padding:.22rem .5rem; border-radius:999px; font-weight:600; white-space:nowrap;
+}
+.badge-ok { background:#14532d; color:#86efac; }
+.badge-warn { background:#78350f; color:#fcd34d; }
+.badge-danger { background:#7f1d1d; color:#fca5a5; }
+.badge-muted { background:#1e293b; color:var(--muted); }
+.badge-crit { background:#4c1d95; color:#e9d5ff; }
+.badge-accent { background:#0c4a6e; color:#7dd3fc; }
+[data-theme="light"] .badge-ok { background:#dcfce7; color:#166534; }
+[data-theme="light"] .badge-warn { background:#fef3c7; color:#92400e; }
+[data-theme="light"] .badge-danger { background:#fee2e2; color:#991b1b; }
+[data-theme="light"] .badge-muted { background:#e2e8f0; color:#475569; }
+[data-theme="light"] .badge-crit { background:#ede9fe; color:#5b21b6; }
+[data-theme="light"] .badge-accent { background:#e0f2fe; color:#0369a1; }
 
-.tabs-desktop{display:none;gap:.35rem;padding:.5rem 1rem;border-bottom:1px solid var(--border);overflow-x:auto}
-.tab{padding:.45rem .8rem;border-radius:8px;cursor:pointer;font-size:.8rem;font-weight:600;color:var(--muted);white-space:nowrap}
-.tab.active{background:var(--card);color:var(--accent)}
-.tab:hover{color:var(--text)}
+.content { padding:1rem 1rem calc(5.5rem + var(--safe-bottom)); max-width:1200px; width:100%; margin:0 auto; }
+.panel { display:none; }
+.panel.active { display:block; }
 
-.bottom-nav{
-  position:fixed;bottom:0;left:0;right:0;z-index:30;
-  display:flex;background:#0f172a;border-top:1px solid var(--border);
-  padding:0.25rem 0 calc(0.25rem + var(--safe-bottom));
-  overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;
+.bottom-nav {
+  position:fixed; bottom:0; left:0; right:0; z-index:30;
+  display:flex; background:var(--panel); border-top:1px solid var(--border);
+  padding:.2rem 0 calc(.2rem + var(--safe-bottom));
+  overflow-x:auto; -webkit-overflow-scrolling:touch; scrollbar-width:none;
 }
-.bottom-nav::-webkit-scrollbar{display:none}
-.nav-item{
-  flex:1 0 auto;min-width:4rem;display:flex;flex-direction:column;align-items:center;
-  gap:.1rem;padding:.4rem .3rem;color:var(--muted);font-size:.62rem;font-weight:600;
-  cursor:pointer;border:none;background:transparent;
+.bottom-nav::-webkit-scrollbar { display:none; }
+.nav-item {
+  flex:1 0 auto; min-width:3.6rem; display:flex; flex-direction:column; align-items:center;
+  gap:.08rem; padding:.35rem .2rem; color:var(--muted); font-size:.58rem; font-weight:600;
+  cursor:pointer; border:none; background:transparent; min-height:var(--touch);
 }
-.nav-item.active{color:var(--accent)}
-.nav-item .ico{font-size:1.15rem;line-height:1}
+.nav-item.active { color:var(--accent); }
+.nav-item .ico { font-size:1.15rem; line-height:1; }
 
-.panel{display:none;padding:1rem 1rem 5rem}
-.panel.active{display:block}
+.card {
+  background:var(--card); border:1px solid var(--border); border-radius:var(--radius);
+  padding:1rem; margin-bottom:1rem; box-shadow:var(--shadow);
+}
+.card h2 { font-size:.95rem; font-weight:700; margin-bottom:.75rem; display:flex; align-items:center; gap:.4rem; flex-wrap:wrap; }
+.card h3 { font-size:.88rem; font-weight:600; margin-bottom:.5rem; color:var(--muted); }
+.grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(140px, 1fr)); gap:.75rem; }
+.stat {
+  background:var(--panel); border:1px solid var(--border); border-radius:10px;
+  padding:.85rem; text-align:center;
+}
+.stat .val { font-size:1.45rem; font-weight:700; color:var(--accent); }
+.stat .lbl { font-size:.7rem; color:var(--muted); margin-top:.2rem; text-transform:uppercase; letter-spacing:.03em; }
+.row { display:flex; flex-wrap:wrap; gap:.5rem; align-items:center; }
+.btn {
+  background:var(--accent); color:#0b1220; border:none; padding:.55rem .9rem;
+  border-radius:10px; font-weight:700; cursor:pointer; font-size:.85rem;
+  min-height:var(--touch); touch-action:manipulation;
+}
+[data-theme="light"] .btn { color:#fff; }
+.btn:active { filter:brightness(.92); }
+.btn-danger { background:var(--danger); color:#fff; }
+.btn-ok { background:var(--ok); color:#052e16; }
+.btn-warn { background:var(--warn); color:#1c1917; }
+.btn-sm { padding:.35rem .65rem; font-size:.78rem; min-height:auto; }
+.btn.ghost { background:transparent; color:var(--text); border:1px solid var(--border); }
+.btn:disabled { opacity:.5; cursor:not-allowed; }
+input, select {
+  background:var(--bg); border:1px solid var(--border); color:var(--text);
+  padding:.55rem .7rem; border-radius:8px; font-size:.9rem; min-height:var(--touch);
+}
+.chips { display:flex; flex-wrap:wrap; gap:.4rem; margin-bottom:.75rem; }
+.chip {
+  padding:.35rem .7rem; border-radius:999px; border:1px solid var(--border);
+  background:transparent; color:var(--muted); font-size:.78rem; font-weight:600; cursor:pointer;
+  min-height:auto;
+}
+.chip.active { background:var(--accent); color:#0b1220; border-color:var(--accent); }
+[data-theme="light"] .chip.active { color:#fff; }
+.chip .cnt { opacity:.85; margin-left:.2rem; }
+.device-list { display:flex; flex-direction:column; gap:.55rem; }
+.device-card {
+  background:var(--panel); border:1px solid var(--border); border-radius:10px;
+  padding:.85rem; width:100%;
+}
+.device-card .title { display:flex; justify-content:space-between; align-items:flex-start; gap:.5rem; flex-wrap:wrap; }
+.device-card .meta { font-size:.8rem; color:var(--muted); margin-top:.25rem; word-break:break-all; }
+.mono { font-family:ui-monospace, Menlo, Consolas, monospace; }
+.pre {
+  background:var(--bg); border:1px solid var(--border); border-radius:8px;
+  padding:.75rem; font-family:ui-monospace, Menlo, monospace; font-size:.78rem;
+  white-space:pre-wrap; word-break:break-all; max-height:28rem; overflow:auto;
+}
+.empty { color:var(--muted); padding:1.5rem; text-align:center; }
+.muted { color:var(--muted); font-size:.85rem; }
+.banner {
+  border-radius:var(--radius); padding:1rem 1.1rem; margin-bottom:1rem;
+  display:flex; align-items:center; gap:.75rem; border:1px solid var(--border);
+}
+.banner.ok { background:rgba(34,197,94,.12); border-color:rgba(34,197,94,.35); }
+.banner.warn { background:rgba(245,158,11,.12); border-color:rgba(245,158,11,.35); }
+.banner.danger { background:rgba(239,68,68,.12); border-color:rgba(239,68,68,.35); }
+.charts { display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:1rem; margin-bottom:1rem; }
+.chart-box { background:var(--panel); border:1px solid var(--border); border-radius:10px; padding:1rem; }
+.chart-box h3 { font-size:.8rem; color:var(--muted); margin-bottom:.75rem; }
+.donut-wrap { display:flex; align-items:center; gap:1rem; justify-content:center; }
+.donut {
+  width:90px; height:90px; border-radius:50%;
+  background:conic-gradient(var(--ok) 0 var(--p, 50%), var(--border) var(--p, 50%) 100%);
+  position:relative;
+}
+.donut::after {
+  content:attr(data-label); position:absolute; inset:18px; border-radius:50%;
+  background:var(--card); display:flex; align-items:center; justify-content:center;
+  font-size:.75rem; font-weight:700; color:var(--text);
+}
+.bars { display:flex; flex-direction:column; gap:.4rem; }
+.bar-row { display:flex; align-items:center; gap:.5rem; font-size:.78rem; }
+.bar-row .name { width:5.5rem; color:var(--muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.bar-row .track { flex:1; height:8px; background:var(--border); border-radius:4px; overflow:hidden; }
+.bar-row .fill { height:100%; background:var(--accent); border-radius:4px; }
+.bar-row .n { width:1.8rem; text-align:right; font-weight:600; }
+.event-list { display:flex; flex-direction:column; gap:.35rem; }
+.event-item {
+  padding:.5rem 0; border-bottom:1px solid var(--border); font-size:.82rem;
+  display:flex; flex-wrap:wrap; gap:.35rem .6rem; align-items:baseline;
+}
+.event-item:last-child { border-bottom:none; }
+.kv { display:grid; grid-template-columns:minmax(8rem, 40%) 1fr; gap:.35rem .75rem; font-size:.85rem; }
+.kv dt { color:var(--muted); }
+.kv dd { word-break:break-word; }
+details.raw { margin-top:.75rem; }
+details.raw summary { cursor:pointer; color:var(--muted); font-size:.8rem; }
+.toast {
+  position:fixed; bottom:calc(5.5rem + var(--safe-bottom)); left:50%; transform:translateX(-50%);
+  background:#1e293b; color:#e2e8f0; padding:.65rem 1.25rem; border-radius:999px;
+  font-size:.85rem; z-index:50; opacity:0; transition:opacity .2s; pointer-events:none;
+  max-width:90vw; text-align:center;
+}
+[data-theme="light"] .toast { background:#0f172a; color:#f8fafc; }
+.toast.show { opacity:1; }
+dialog {
+  border:1px solid var(--border); border-radius:14px; padding:1.25rem;
+  background:var(--card); color:var(--text); max-width:min(420px, 92vw);
+  box-shadow:var(--shadow);
+}
+dialog::backdrop { background:rgba(0,0,0,.45); }
+dialog h3 { margin-bottom:.5rem; font-size:1rem; }
+dialog p { color:var(--muted); font-size:.9rem; margin-bottom:1rem; }
+dialog .actions { display:flex; gap:.5rem; justify-content:flex-end; }
+.theme-btn {
+  background:transparent; border:1px solid var(--border); border-radius:8px;
+  color:var(--text); padding:.4rem .55rem; cursor:pointer; font-size:.9rem; min-height:auto;
+}
+table { width:100%; border-collapse:collapse; font-size:.82rem; }
+th, td { text-align:left; padding:.45rem .4rem; border-bottom:1px solid var(--border); }
+th { color:var(--muted); font-weight:600; font-size:.72rem; text-transform:uppercase; }
 
-.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:.6rem;margin-bottom:1rem}
-.stat,.card{
-  background:var(--card);border:1px solid var(--border);border-radius:var(--radius);
-  padding:.85rem 1rem;
+@media (min-width:900px) {
+  .sidebar { display:flex; }
+  .bottom-nav { display:none; }
+  .topbar .mobile-title { display:none; }
+  .content { padding:1.25rem 1.5rem 2rem; }
 }
-.stat .label{font-size:.68rem;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
-.stat .value{font-size:1.35rem;font-weight:700;margin-top:.15rem}
-.card h2,.card h3{font-size:.95rem;margin-bottom:.6rem;color:var(--accent)}
-.row{display:flex;flex-wrap:wrap;gap:.5rem;align-items:center}
-.btn{
-  background:var(--accent);color:#0b1220;border:none;padding:.55rem .9rem;
-  border-radius:10px;font-weight:700;cursor:pointer;font-size:.85rem;
-  min-height:var(--touch);touch-action:manipulation;
-}
-.btn:active{filter:brightness(.92)}
-.btn-accent{background:var(--accent)}
-.btn-danger{background:var(--danger);color:#fff}
-.btn-ok{background:var(--ok);color:#052e16}
-.btn-sm{padding:.35rem .6rem;font-size:.78rem;min-height:auto}
-.btn.ghost{background:transparent;color:var(--text);border:1px solid var(--border)}
-input,select{
-  background:#0b1220;border:1px solid var(--border);color:var(--text);
-  padding:.55rem .7rem;border-radius:8px;font-size:.9rem;min-height:var(--touch);
-}
-.pre{
-  background:#0b1220;border:1px solid var(--border);border-radius:8px;
-  padding:.75rem;font-family:ui-monospace,Menlo,monospace;font-size:.78rem;
-  white-space:pre-wrap;word-break:break-all;max-height:28rem;overflow:auto;
-}
-.empty{color:var(--muted);padding:1.5rem;text-align:center}
-.muted{color:var(--muted);font-size:.85rem}
-.toast{
-  position:fixed;bottom:5.5rem;left:50%;transform:translateX(-50%);
-  background:#1e293b;color:#e2e8f0;padding:.6rem 1.2rem;border-radius:999px;
-  font-size:.85rem;z-index:50;opacity:0;transition:opacity .2s;pointer-events:none;
-}
-.toast.show{opacity:1}
-
-@media(min-width:800px){
-  .bottom-nav{display:none}
-  .tabs-desktop{display:flex}
-  body{padding-bottom:1rem}
-  .panel{padding:1.2rem 1.5rem 2rem}
+@media (max-width:899px) {
+  .topbar .desktop-only { display:none; }
 }
 </style>
 </head>
 <body>
-<header>
-  <div>
-    <h1>🛡️ Network Guard <span class="badge badge-accent" id="ver-badge">2.2.4</span></h1>
-    <div class="sub">FritzBox · LAN-Scan · Capture · Logs · Security</div>
-  </div>
-  <div id="status-badges" style="display:flex;gap:.35rem;flex-wrap:wrap"></div>
-</header>
+<div class="layout">
+  <aside class="sidebar" aria-label="Hauptnavigation">
+    <div class="brand">
+      <h1>🛡️ Network Guard</h1>
+      <div class="sub">FritzBox · LAN · Security</div>
+    </div>
+    <nav class="side-nav" id="side-nav">
+      <button type="button" data-tab="overview" class="active" aria-current="page"><span class="ico">📊</span> Übersicht</button>
+      <button type="button" data-tab="devices"><span class="ico">💻</span> Geräte</button>
+      <button type="button" data-tab="access"><span class="ico">🚫</span> Zugriff</button>
+      <button type="button" data-tab="security"><span class="ico">🔐</span> Security</button>
+      <button type="button" data-tab="fritz"><span class="ico">📡</span> FritzBox</button>
+      <button type="button" data-tab="traffic"><span class="ico">🧪</span> Traffic</button>
+      <button type="button" data-tab="system"><span class="ico">⚙️</span> System</button>
+    </nav>
+    <div class="foot">
+      <button type="button" class="theme-btn" id="theme-toggle-side" aria-label="Design umschalten">🌓 Design</button>
+      <div class="muted" style="margin-top:.5rem;font-size:.72rem">v<span id="ver-side">2.4.0</span></div>
+    </div>
+  </aside>
 
-<div class="tabs-desktop" id="tabs-desktop">
-  <div class="tab active" data-tab="overview">Übersicht</div>
-  <div class="tab" data-tab="devices">Geräte</div>
-  <div class="tab" data-tab="blocked">Gesperrt</div>
-  <div class="tab" data-tab="security">Security</div>
-  <div class="tab" data-tab="fritz">Fritz / Logs</div>
-  <div class="tab" data-tab="capture">Traffic</div>
-  <div class="tab" data-tab="whitelist">Whitelist</div>
-  <div class="tab" data-tab="config">Einstellungen</div>
+  <div class="main">
+    <header class="topbar">
+      <div>
+        <h1 class="mobile-title">🛡️ Network Guard <span class="badge badge-accent" id="ver-badge">2.4.0</span></h1>
+        <div class="sub desktop-only" id="header-sub">Bereit</div>
+        <div class="sub mobile-title" id="header-sub-m">Bereit</div>
+      </div>
+      <div class="row">
+        <div id="status-badges" class="row"></div>
+        <button type="button" class="theme-btn mobile-title" id="theme-toggle" aria-label="Design umschalten">🌓</button>
+      </div>
+    </header>
+
+    <div class="content">
+      <section class="panel active" id="panel-overview" data-panel="overview">
+        <div id="status-banner" class="banner ok">
+          <span style="font-size:1.4rem">✓</span>
+          <div><strong id="banner-title">Alles in Ordnung</strong><div class="muted" id="banner-sub">Keine kritischen Ereignisse</div></div>
+        </div>
+        <div class="grid" id="overview-stats"></div>
+        <div class="charts">
+          <div class="chart-box">
+            <h3>Aktiv / Offline</h3>
+            <div class="donut-wrap">
+              <div class="donut" id="donut-active" data-label="—" style="--p:0%"></div>
+              <div class="muted" id="donut-legend" style="font-size:.8rem"></div>
+            </div>
+          </div>
+          <div class="chart-box">
+            <h3>Nach Hersteller</h3>
+            <div class="bars" id="bars-vendor"></div>
+          </div>
+          <div class="chart-box">
+            <h3>Nach Schnittstelle</h3>
+            <div class="bars" id="bars-iface"></div>
+          </div>
+        </div>
+        <div class="card">
+          <h2>Letzte Ereignisse</h2>
+          <div id="overview-events" class="event-list empty">Keine Events</div>
+        </div>
+        <div class="card">
+          <h2>Zuletzt gesehene Geräte</h2>
+          <div id="overview-recent" class="device-list empty">—</div>
+        </div>
+        <div class="card">
+          <h2>Schnellaktionen</h2>
+          <div class="row">
+            <button type="button" class="btn" id="ov-scan">Force Scan</button>
+            <button type="button" class="btn ghost" id="ov-perimeter">Perimeter</button>
+            <button type="button" class="btn ghost" id="ov-threat">Threat-Intel</button>
+            <button type="button" class="btn ghost" id="ov-deep">Deep Scan</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel" id="panel-devices" data-panel="devices">
+        <div class="card">
+          <h2>Geräte <span class="badge badge-muted" id="dev-count">0</span></h2>
+          <div class="row" style="margin-bottom:.75rem">
+            <input id="dev-filter" type="search" placeholder="Suche Name / IP / MAC…" style="flex:1;min-width:12rem" aria-label="Geräte suchen">
+            <button type="button" class="btn ghost" id="btn-refresh-dev">Aktualisieren</button>
+          </div>
+          <div class="chips" id="dev-chips" role="group" aria-label="Filter">
+            <button type="button" class="chip active" data-filter="all">Alle <span class="cnt" id="c-all">0</span></button>
+            <button type="button" class="chip" data-filter="active">Aktiv <span class="cnt" id="c-active">0</span></button>
+            <button type="button" class="chip" data-filter="offline">Offline <span class="cnt" id="c-offline">0</span></button>
+            <button type="button" class="chip" data-filter="crit">Kritisch <span class="cnt" id="c-crit">0</span></button>
+            <button type="button" class="chip" data-filter="blocked">Gesperrt <span class="cnt" id="c-blocked">0</span></button>
+          </div>
+          <div id="device-list" class="device-list empty">Laden…</div>
+        </div>
+      </section>
+
+      <section class="panel" id="panel-access" data-panel="access">
+        <div class="card">
+          <h2>Manuell sperren</h2>
+          <div class="row">
+            <input id="manual-ip" placeholder="IP-Adresse" style="flex:1" inputmode="decimal" aria-label="IP zum Sperren">
+            <button type="button" class="btn btn-danger" id="btn-manual-block">Sperren</button>
+          </div>
+        </div>
+        <div class="card">
+          <h2>Gesperrte Geräte <span class="badge badge-muted" id="bl-count">0</span></h2>
+          <div id="blocked-list" class="device-list empty">Keine Sperren</div>
+        </div>
+        <div class="card">
+          <h2>Whitelist</h2>
+          <p class="muted" style="margin-bottom:.75rem">Geschützte IPs/MACs werden nie automatisch gesperrt.</p>
+          <div class="row" style="margin-bottom:.75rem">
+            <input id="wl-entry" placeholder="IP oder MAC" style="flex:1" aria-label="Whitelist-Eintrag">
+            <button type="button" class="btn btn-ok" id="btn-wl-add">Hinzufügen</button>
+          </div>
+          <div id="wl-list" class="device-list empty">Leer</div>
+        </div>
+      </section>
+
+      <section class="panel" id="panel-security" data-panel="security">
+        <div class="grid" id="sec-stats"></div>
+        <div class="card">
+          <h2>Aktionen</h2>
+          <div class="row">
+            <button type="button" class="btn" id="sec-perimeter">Perimeter-Scan</button>
+            <button type="button" class="btn ghost" id="sec-threat">Threat-Intel</button>
+            <button type="button" class="btn ghost" id="sec-deep">Deep LAN Scan</button>
+          </div>
+        </div>
+        <div class="card">
+          <h2>IP prüfen (Threat-Intel)</h2>
+          <div class="row">
+            <input id="check-ip" placeholder="z. B. 1.2.3.4" style="flex:1" inputmode="decimal" aria-label="IP prüfen">
+            <button type="button" class="btn" id="btn-check-ip">Prüfen</button>
+          </div>
+          <div id="check-ip-result" class="pre" style="margin-top:.5rem;display:none"></div>
+        </div>
+        <div class="card">
+          <h2>Ereignisse <span class="badge badge-muted" id="sec-ev-count">0</span></h2>
+          <div class="chips" id="sev-chips">
+            <button type="button" class="chip active" data-sev="all">Alle</button>
+            <button type="button" class="chip" data-sev="high">Hoch</button>
+            <button type="button" class="chip" data-sev="medium">Mittel</button>
+            <button type="button" class="chip" data-sev="low">Niedrig</button>
+          </div>
+          <div id="sec-events" class="event-list empty">—</div>
+        </div>
+        <div class="card">
+          <h2>Deep-Scan Ergebnis</h2>
+          <pre class="pre" id="deep-result">Noch kein Scan</pre>
+        </div>
+      </section>
+
+      <section class="panel" id="panel-fritz" data-panel="fritz">
+        <div class="card">
+          <h2>WAN / Verbindung</h2>
+          <div id="fz-wan" class="kv">—</div>
+          <details class="raw"><summary>Rohdaten</summary><pre class="pre" id="fz-wan-raw"></pre></details>
+        </div>
+        <div class="card">
+          <h2>WLAN</h2>
+          <div id="fz-wlan" style="overflow-x:auto">—</div>
+          <details class="raw"><summary>Rohdaten</summary><pre class="pre" id="fz-wlan-raw"></pre></details>
+        </div>
+        <div class="card">
+          <h2>Portfreigaben</h2>
+          <div id="fz-ports" style="overflow-x:auto">—</div>
+          <details class="raw"><summary>Rohdaten</summary><pre class="pre" id="fz-ports-raw"></pre></details>
+        </div>
+        <div class="card">
+          <h2>Ereignisprotokoll</h2>
+          <div class="row" style="margin-bottom:.5rem">
+            <select id="fz-log-filter" aria-label="Log-Filter">
+              <option value="all">Alle</option>
+              <option value="system">System</option>
+              <option value="internet">Internet</option>
+              <option value="wlan">WLAN</option>
+              <option value="telefon">Telefon</option>
+              <option value="usb">USB</option>
+            </select>
+            <button type="button" class="btn" id="btn-fz-logs">Laden</button>
+          </div>
+          <div id="fz-logs" class="event-list empty">—</div>
+          <details class="raw"><summary>Rohdaten</summary><pre class="pre" id="fz-logs-raw"></pre></details>
+        </div>
+        <div class="card">
+          <h2>Summary</h2>
+          <details class="raw" open><summary>Zusammenfassung</summary><pre class="pre" id="fz-summary">—</pre></details>
+        </div>
+      </section>
+
+      <section class="panel" id="panel-traffic" data-panel="traffic">
+        <div class="card">
+          <h2>Packet Capture <span class="badge badge-muted" id="cap-status">idle</span></h2>
+          <div class="row" style="margin-bottom:.75rem">
+            <label class="muted">Interface
+              <select id="cap-iface" aria-label="Capture-Interface">
+                <option value="1-lan">LAN (bridge)</option>
+                <option value="2-1">Internet (WAN)</option>
+                <option value="1-eth0">Physical LAN1</option>
+                <option value="1-eth1">Physical LAN2</option>
+                <option value="1-eth2">Physical LAN3</option>
+                <option value="1-eth3">Physical LAN4</option>
+                <option value="4-133">WLAN 2.4 GHz</option>
+                <option value="4-135">WLAN 5 GHz</option>
+              </select>
+            </label>
+            <label class="muted">Dauer (s, 0=∞)
+              <input id="cap-duration" type="number" min="0" value="60" style="width:6rem" aria-label="Capture-Dauer">
+            </label>
+            <button type="button" class="btn" id="cap-start">▶ Start</button>
+            <button type="button" class="btn btn-danger" id="cap-stop">■ Stop</button>
+          </div>
+          <div id="cap-live" class="muted"></div>
+        </div>
+        <div class="card">
+          <h2>Gespeicherte Captures</h2>
+          <div id="cap-list" class="device-list empty">Keine Captures</div>
+        </div>
+        <div class="card">
+          <h2>Analyse (tshark)</h2>
+          <pre class="pre" id="cap-analysis">Noch keine Analyse</pre>
+        </div>
+      </section>
+
+      <section class="panel" id="panel-system" data-panel="system">
+        <div class="card">
+          <h2>Effektive Config</h2>
+          <p class="muted" style="margin-bottom:.5rem">Nur Anzeige – Änderungen in den Add-on-Optionen in HA vornehmen.</p>
+          <dl class="kv" id="cfg-kv"></dl>
+        </div>
+        <div class="card">
+          <h2>Status / Diagnose</h2>
+          <dl class="kv" id="status-kv"></dl>
+        </div>
+        <div class="card">
+          <h2>Manuelle Aktionen</h2>
+          <div class="row">
+            <button type="button" class="btn" id="cfg-scan">Force Scan</button>
+            <button type="button" class="btn ghost" id="cfg-perimeter">Perimeter</button>
+            <button type="button" class="btn ghost" id="cfg-threat">Threat-Intel</button>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
 </div>
 
-<nav class="bottom-nav">
-  <button class="nav-item active" data-tab="overview"><span class="ico">📊</span>Übersicht</button>
-  <button class="nav-item" data-tab="devices"><span class="ico">💻</span>Geräte</button>
-  <button class="nav-item" data-tab="blocked"><span class="ico">🚫</span>Gesperrt</button>
-  <button class="nav-item" data-tab="security"><span class="ico">🔐</span>Security</button>
-  <button class="nav-item" data-tab="fritz"><span class="ico">📡</span>Fritz</button>
-  <button class="nav-item" data-tab="capture"><span class="ico">🧪</span>Traffic</button>
-  <button class="nav-item" data-tab="whitelist"><span class="ico">✅</span>Whitelist</button>
-  <button class="nav-item" data-tab="config"><span class="ico">⚙️</span>Config</button>
+<nav class="bottom-nav" aria-label="Mobile Navigation">
+  <button type="button" class="nav-item active" data-tab="overview"><span class="ico">📊</span>Übersicht</button>
+  <button type="button" class="nav-item" data-tab="devices"><span class="ico">💻</span>Geräte</button>
+  <button type="button" class="nav-item" data-tab="access"><span class="ico">🚫</span>Zugriff</button>
+  <button type="button" class="nav-item" data-tab="security"><span class="ico">🔐</span>Security</button>
+  <button type="button" class="nav-item" data-tab="fritz"><span class="ico">📡</span>Fritz</button>
+  <button type="button" class="nav-item" data-tab="traffic"><span class="ico">🧪</span>Traffic</button>
+  <button type="button" class="nav-item" data-tab="system"><span class="ico">⚙️</span>System</button>
 </nav>
 
-<section class="panel active" id="panel-overview" data-panel="overview">
-  <div class="grid" id="overview-stats"></div>
-  <div class="card" style="margin-top:1rem">
-    <h2>Letzte Security-Events</h2>
-    <div id="overview-events" class="empty">Keine Events</div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<dialog id="confirm-dlg">
+  <h3 id="dlg-title">Bestätigen</h3>
+  <p id="dlg-msg"></p>
+  <div class="actions">
+    <button type="button" class="btn ghost" id="dlg-cancel">Abbrechen</button>
+    <button type="button" class="btn btn-danger" id="dlg-ok">OK</button>
   </div>
-  <div class="card">
-    <h2>Schnellaktionen</h2>
-    <div class="row">
-      <button class="btn btn-accent" id="ov-scan">Force Scan</button>
-      <button class="btn" id="ov-perimeter">Perimeter Scan</button>
-      <button class="btn" id="ov-threat">Threat-Intel</button>
-      <button class="btn" id="ov-deep">Deep LAN Scan</button>
-    </div>
-  </div>
-</section>
-
-<section class="panel" id="panel-devices" data-panel="devices">
-  <div class="card">
-    <h2>Geräte <span class="badge badge-muted" id="dev-count">0</span></h2>
-    <div class="row" style="margin-bottom:.75rem">
-      <input id="dev-filter" placeholder="Filter Name / IP / MAC…" style="flex:1;min-width:12rem">
-      <select id="dev-filter-active">
-        <option value="all">Alle</option>
-        <option value="active">Nur aktiv</option>
-        <option value="inactive">Inaktiv</option>
-        <option value="crit">Kritisch</option>
-      </select>
-      <button class="btn ghost" id="btn-refresh-dev">Aktualisieren</button>
-    </div>
-    <div id="device-list" class="empty">Laden…</div>
-  </div>
-</section>
-
-<section class="panel" id="panel-blocked" data-panel="blocked">
-  <div class="card">
-    <h2>Gesperrte Geräte (WAN)</h2>
-    <div class="row" style="margin-bottom:.75rem">
-      <input id="manual-ip" placeholder="IP manuell sperren" style="flex:1">
-      <button class="btn btn-danger" id="btn-manual-block">Sperren</button>
-    </div>
-    <div id="blocked-list" class="empty">Keine Sperren</div>
-  </div>
-</section>
-
-<section class="panel" id="panel-security" data-panel="security">
-  <div class="card">
-    <h2>Security Status</h2>
-    <div class="grid" id="sec-stats"></div>
-    <div class="row" style="margin-top:.75rem">
-      <button class="btn btn-accent" id="sec-perimeter">Perimeter jetzt</button>
-      <button class="btn" id="sec-threat">Threat-Intel</button>
-      <button class="btn" id="sec-deep">Deep Scan</button>
-    </div>
-  </div>
-  <div class="card">
-    <h2>IP prüfen (Threat-Intel)</h2>
-    <div class="row">
-      <input id="check-ip" placeholder="z.B. 1.2.3.4" style="flex:1">
-      <button class="btn" id="btn-check-ip">Prüfen</button>
-    </div>
-    <pre class="pre" id="check-ip-result" style="margin-top:.5rem;display:none"></pre>
-  </div>
-  <div class="card">
-    <h2>Events <span class="badge badge-muted" id="sec-ev-count">0</span></h2>
-    <div id="sec-events" class="empty">—</div>
-  </div>
-  <div class="card">
-    <h2>Deep-Scan Ergebnis</h2>
-    <pre class="pre" id="deep-result">Noch kein Scan</pre>
-  </div>
-</section>
-
-<section class="panel" id="panel-fritz" data-panel="fritz">
-  <div class="card">
-    <h2>FritzBox Summary</h2>
-    <pre class="pre" id="fz-summary">—</pre>
-  </div>
-  <div class="card">
-    <h2>Ereignisprotokoll</h2>
-    <div class="row" style="margin-bottom:.5rem">
-      <select id="fz-log-filter">
-        <option value="all">Alle</option>
-        <option value="system">System</option>
-        <option value="internet">Internet</option>
-        <option value="wlan">WLAN</option>
-        <option value="telefon">Telefon</option>
-        <option value="usb">USB</option>
-      </select>
-      <button class="btn" id="btn-fz-logs">Laden</button>
-    </div>
-    <pre class="pre" id="fz-logs-pre">—</pre>
-  </div>
-  <div class="card">
-    <h2>WAN / Verbindung</h2>
-    <pre class="pre" id="fz-wan-pre">—</pre>
-  </div>
-  <div class="card">
-    <h2>Port-Freigaben</h2>
-    <pre class="pre" id="fz-ports-pre">—</pre>
-  </div>
-  <div class="card">
-    <h2>WLAN</h2>
-    <pre class="pre" id="fz-wlan-pre">—</pre>
-  </div>
-</section>
-
-<section class="panel" id="panel-capture" data-panel="capture">
-  <div class="card">
-    <h2>Packet Capture (FritzBox)</h2>
-    <div class="row" style="margin-bottom:.75rem">
-      <label>Interface
-        <select id="cap-iface">
-          <option value="1-lan">LAN (bridge)</option>
-          <option value="2-1">Internet (WAN)</option>
-          <option value="1-eth0">Physical LAN1</option>
-          <option value="1-eth1">Physical LAN2</option>
-          <option value="1-eth2">Physical LAN3</option>
-          <option value="1-eth3">Physical LAN4</option>
-          <option value="4-133">WLAN 2.4 GHz</option>
-          <option value="4-135">WLAN 5 GHz</option>
-        </select>
-      </label>
-      <label>Dauer (s, 0=∞)
-        <input id="cap-duration" type="number" min="0" value="60" style="width:6rem">
-      </label>
-      <button class="btn btn-accent" id="cap-start">▶ Start</button>
-      <button class="btn btn-danger" id="cap-stop">■ Stop</button>
-      <span id="cap-status" class="badge badge-muted">idle</span>
-    </div>
-    <div id="cap-live" class="muted"></div>
-  </div>
-  <div class="card">
-    <h3>Gespeicherte Captures</h3>
-    <div id="cap-list" class="empty">Keine Captures</div>
-  </div>
-  <div class="card">
-    <h3>Analyse (tshark)</h3>
-    <pre class="pre" id="cap-analysis">Noch keine Analyse</pre>
-  </div>
-  <p class="muted" style="font-size:.75rem">Host-Extcap: siehe Repo <code>extcap/</code> · Companion: FRITZ!Portal</p>
-</section>
-
-<section class="panel" id="panel-whitelist" data-panel="whitelist">
-  <div class="card">
-    <h2>Whitelist</h2>
-    <p class="muted" style="margin-bottom:.75rem">Geschützte IPs/MACs werden nie auto-gesperrt.</p>
-    <div class="row" style="margin-bottom:.75rem">
-      <input id="wl-entry" placeholder="IP oder MAC" style="flex:1">
-      <button class="btn btn-ok" id="btn-wl-add">Hinzufügen</button>
-    </div>
-    <div id="wl-list" class="empty">Leer</div>
-  </div>
-</section>
-
-<section class="panel" id="panel-config" data-panel="config">
-  <div class="card">
-    <h2>Effektive Runtime-Config</h2>
-    <p class="muted" style="margin-bottom:.5rem">Nur Anzeige – Änderungen in den Add-on-Optionen in HA vornehmen.</p>
-    <pre class="pre" id="cfg-pre">Laden…</pre>
-  </div>
-  <div class="card">
-    <h2>Status / Diagnose</h2>
-    <pre class="pre" id="status-pre">—</pre>
-  </div>
-  <div class="card">
-    <h2>Manuelle Aktionen</h2>
-    <div class="row">
-      <button class="btn btn-accent" id="cfg-scan">Force Scan</button>
-      <button class="btn" id="cfg-perimeter">Perimeter</button>
-      <button class="btn" id="cfg-threat">Threat-Intel</button>
-    </div>
-  </div>
-</section>
-
-<div class="toast" id="toast"></div>
+</dialog>
 
 <script>
-const $ = s => document.querySelector(s);
-const $$ = s => Array.from(document.querySelectorAll(s));
-
-function toast(msg, ms=2200){
-  const t = $('#toast');
-  t.textContent = msg;
-  t.classList.add('show');
-  setTimeout(() => t.classList.remove('show'), ms);
-}
-
-async function api(path, opts={}){
-  const o = { method: opts.method || 'GET', headers: {'Content-Type':'application/json'} };
-  if (opts.body) o.body = JSON.stringify(opts.body);
-  const r = await fetch(path, o);
-  const text = await r.text();
-  let data;
-  try { data = JSON.parse(text); } catch { data = { raw: text }; }
-  if (!r.ok) throw new Error(data.error || data.message || text || r.status);
-  return data;
-}
-
-function showTab(name){
-  $$('.tab, .nav-item').forEach(el => el.classList.toggle('active', el.dataset.tab === name));
-  $$('.panel').forEach(p => p.classList.toggle('active', p.dataset.panel === name));
-  if(name==='overview') refreshOverview();
-  if(name==='devices') refreshDevices();
-  if(name==='blocked') refreshBlocked();
-  if(name==='security') refreshSecurity();
-  if(name==='fritz') refreshFritz();
-  if(name==='capture') refreshCapture();
-  if(name==='whitelist') refreshWhitelist();
-  if(name==='config') refreshConfig();
-}
-
-document.addEventListener('click', ev => {
-  const t = ev.target.closest('[data-tab]');
-  if(t){ showTab(t.dataset.tab); }
-});
-
-async function refreshOverview(){
-  try{
-    const [st, ov, sec, known, blocked] = await Promise.all([
-      api('/api/status'), api('/api/overview').catch(()=>({})),
-      api('/api/security').catch(()=>({})),
-      api('/api/known'), api('/api/blocked')
-    ]);
-    const devices = Object.values(known.devices||known||{});
-    const active = devices.filter(d=>d.active).length;
-    const crit = devices.filter(d=>d.critical).length;
-    const bl = blocked.count || Object.keys(blocked.devices||{}).length;
-    $('#overview-stats').innerHTML = `
-      <div class="stat"><div class="label">Geräte</div><div class="value">${known.count||devices.length}</div><div class="muted">${active} aktiv</div></div>
-      <div class="stat"><div class="label">Kritisch</div><div class="value" style="color:var(--crit)">${crit}</div></div>
-      <div class="stat"><div class="label">Gesperrt</div><div class="value" style="color:var(--danger)">${bl}</div></div>
-      <div class="stat"><div class="label">Modus</div><div class="value" style="font-size:1rem">${st.mode||ov.mode||'—'}</div></div>`;
-    const badges = [];
-    badges.push(`<span class="badge ${st.fritz_ok===true?'badge-ok':st.fritz_ok===false?'badge-danger':'badge-muted'}">Fritz ${st.fritz_ok===true?'OK':st.fritz_ok===false?'Err':'?'}</span>`);
-    if(st.version||ov.version) badges.push(`<span class="badge badge-muted">${st.version||ov.version}</span>`);
-    $('#status-badges').innerHTML = badges.join('');
-    const events = (sec.events || []).slice(0,8);
-    $('#overview-events').innerHTML = events.length
-      ? events.map(e => `<div style="padding:.35rem 0;border-bottom:1px solid var(--border);font-size:.82rem"><strong>${e.type||e.event||'event'}</strong> ${e.ip||''} <span class="muted">${e.ts||e.time||''}</span></div>`).join('')
-      : '<div class="empty">Keine Events</div>';
-  }catch(e){ toast('Overview: '+e.message); }
-}
-
-$('#ov-scan')?.addEventListener('click', async () => { toast('Scan…'); await api('/api/scan/force',{method:'POST',body:{}}); toast('Scan gestartet'); refreshOverview(); });
-$('#ov-perimeter')?.addEventListener('click', async () => { toast('Perimeter…'); await api('/api/security/perimeter',{method:'POST',body:{}}); toast('OK'); refreshOverview(); });
-$('#ov-threat')?.addEventListener('click', async () => { toast('Threat-Intel…'); await api('/api/security/threat-intel',{method:'POST',body:{}}); toast('OK'); refreshOverview(); });
-$('#ov-deep')?.addEventListener('click', async () => { toast('Deep Scan…'); const r=await api('/api/security/deep-scan',{method:'POST',body:{}}); $('#deep-result').textContent=JSON.stringify(r,null,2); showTab('security'); });
-
-async function refreshDevices(){
-  try{
-    const known = await api('/api/known');
-    let list = Object.values(known.devices||known||{});
-    const q = ($('#dev-filter')?.value||'').toLowerCase();
-    const f = $('#dev-filter-active')?.value || 'all';
-    if(f==='active') list = list.filter(d=>d.active);
-    if(f==='inactive') list = list.filter(d=>!d.active);
-    if(f==='crit') list = list.filter(d=>d.critical);
-    if(q) list = list.filter(d => [d.ip,d.mac,d.hostname,d.vendor].join(' ').toLowerCase().includes(q));
-    list.sort((a,b)=>(a.ip||'').localeCompare(b.ip||'',undefined,{numeric:true}));
-    $('#dev-count').textContent = list.length;
-    if(!list.length){ $('#device-list').innerHTML='<div class="empty">Keine Geräte</div>'; return; }
-    $('#device-list').innerHTML = list.map(d => {
-      const pills = [];
-      if(d.blocked) pills.push('<span class="badge badge-danger">gesperrt</span>');
-      if(d.critical) pills.push('<span class="badge badge-crit">kritisch</span>');
-      if(d.whitelisted) pills.push('<span class="badge badge-ok">WL</span>');
-      pills.push(d.active?'<span class="badge badge-ok">aktiv</span>':'<span class="badge badge-muted">offline</span>');
-      return `<div class="card" style="margin-bottom:.5rem">
-        <div class="row" style="justify-content:space-between">
-          <strong class="mono">${d.ip||'–'}</strong>
-          <div>${pills.join(' ')}</div>
-        </div>
-        <div class="muted" style="font-size:.8rem;margin:.3rem 0">${d.hostname||'–'} · ${d.mac||'–'} · ${d.vendor||''}</div>
-        <div class="row">
-          ${d.ip&&!d.blocked?`<button class="btn btn-sm btn-danger" data-block="${d.ip}">Sperren</button>`:''}
-          ${d.ip&&d.blocked?`<button class="btn btn-sm btn-ok" data-unblock="${d.ip}">Entsperren</button>`:''}
-          <button class="btn btn-sm ghost" data-wl-ip="${d.ip||''}" data-wl-mac="${d.mac||''}">${d.whitelisted?'Un-WL':'Whitelist'}</button>
-        </div>
-      </div>`;
-    }).join('');
-  }catch(e){ $('#device-list').innerHTML=`<div class="empty">Fehler: ${e.message}</div>`; }
-}
-$('#btn-refresh-dev')?.addEventListener('click', refreshDevices);
-$('#dev-filter')?.addEventListener('input', () => refreshDevices());
-$('#dev-filter-active')?.addEventListener('change', () => refreshDevices());
-
-document.addEventListener('click', async (ev) => {
-  const t = ev.target;
-  if(t.dataset?.block){ if(!confirm('WAN sperren: '+t.dataset.block+'?')) return; await api('/api/block',{method:'POST',body:{ip:t.dataset.block,reason:'manual UI'}}); toast('Gesperrt'); refreshDevices(); refreshBlocked(); }
-  if(t.dataset?.unblock){ await api('/api/unblock',{method:'POST',body:{ip:t.dataset.unblock}}); toast('Entsperrt'); refreshDevices(); refreshBlocked(); }
-  if(t.dataset?.wlIp!==undefined || t.dataset?.wlMac){ await api('/api/whitelist',{method:'POST',body:{ip:t.dataset.wlIp||'',mac:t.dataset.wlMac||''}}); toast('Whitelist aktualisiert'); refreshDevices(); refreshWhitelist(); }
-});
-
-async function refreshBlocked(){
-  try{
-    const blocked = await api('/api/blocked');
-    const devices = Object.values(blocked.devices||blocked||{});
-    if(!devices.length){ $('#blocked-list').innerHTML='<div class="empty">Keine Sperren</div>'; return; }
-    $('#blocked-list').innerHTML = devices.map(d => `
-      <div class="card" style="margin-bottom:.5rem">
-        <div class="row" style="justify-content:space-between"><strong class="mono">${d.ip}</strong><span class="badge badge-danger">${d.reason||'gesperrt'}</span></div>
-        <div class="muted" style="font-size:.8rem">${d.hostname||''} · ${d.mac||''}</div>
-        <button class="btn btn-sm btn-ok" data-unblock="${d.ip}">Entsperren</button>
-      </div>`).join('');
-  }catch(e){ $('#blocked-list').innerHTML=`<div class="empty">${e.message}</div>`; }
-}
-$('#btn-manual-block')?.addEventListener('click', async () => {
-  const ip = $('#manual-ip').value.trim();
-  if(!ip) return;
-  await api('/api/block',{method:'POST',body:{ip,reason:'manual UI'}});
-  $('#manual-ip').value=''; toast('Gesperrt'); refreshBlocked();
-});
-
-async function refreshSecurity(){
-  try{
-    const sec = await api('/api/security');
-    const events = await api('/api/security/events?limit=80').catch(()=>({events:[]}));
-    const ev = events.events || sec.events || [];
-    $('#sec-ev-count').textContent = ev.length;
-    $('#sec-stats').innerHTML = `
-      <div class="stat"><div class="label">Status</div><div class="value" style="font-size:1rem">${sec.status||sec.mode||'OK'}</div></div>
-      <div class="stat"><div class="label">Events</div><div class="value">${ev.length}</div></div>`;
-    $('#sec-events').innerHTML = ev.length ? ev.slice(0,40).map(e=>`<div style="padding:.3rem 0;border-bottom:1px solid var(--border);font-size:.8rem"><strong>${e.type||e.event||''}</strong> ${e.ip||e.msg||''} <span class="muted">${e.ts||''}</span></div>`).join('') : '<div class="empty">Keine Events</div>';
-  }catch(e){ toast('Security: '+e.message); }
-}
-$('#sec-perimeter')?.addEventListener('click', async () => { toast('Perimeter…'); const r=await api('/api/security/perimeter',{method:'POST',body:{}}); toast(r.ok!==false?'OK':'Fehler'); refreshSecurity(); });
-$('#sec-threat')?.addEventListener('click', async () => { toast('Threat-Intel…'); await api('/api/security/threat-intel',{method:'POST',body:{}}); refreshSecurity(); });
-$('#sec-deep')?.addEventListener('click', async () => { toast('Deep Scan läuft…'); const r=await api('/api/security/deep-scan',{method:'POST',body:{}}); $('#deep-result').textContent=JSON.stringify(r,null,2); toast('Deep Scan fertig'); });
-$('#btn-check-ip')?.addEventListener('click', async () => {
-  const ip = $('#check-ip').value.trim();
-  if(!ip) return;
-  const r = await api('/api/security/check-ip',{method:'POST',body:{ip}});
-  const el = $('#check-ip-result'); el.style.display='block'; el.textContent=JSON.stringify(r,null,2);
-});
-
-async function refreshFritz(){
-  try{
-    const sum = await api('/api/fritz/summary');
-    $('#fz-summary').textContent = JSON.stringify(sum,null,2);
-  }catch(e){ $('#fz-summary').textContent = 'Fehler: '+e.message; }
-  loadFz('logs'); loadFz('wan'); loadFz('ports'); loadFz('wlan');
-}
-async function loadFz(kind){
-  try{
-    if(kind==='logs'){
-      const filt = $('#fz-log-filter')?.value || 'all';
-      const r = await api('/api/fritz/logs?filter='+encodeURIComponent(filt)+'&limit=80');
-      $('#fz-logs-pre').textContent = typeof r==='string'?r:JSON.stringify(r,null,2);
-    } else if(kind==='wan'){
-      const r = await api('/api/fritz/wan');
-      $('#fz-wan-pre').textContent = JSON.stringify(r,null,2);
-    } else if(kind==='ports'){
-      const r = await api('/api/fritz/ports');
-      $('#fz-ports-pre').textContent = JSON.stringify(r,null,2);
-    } else if(kind==='wlan'){
-      const r = await api('/api/fritz/wlan');
-      $('#fz-wlan-pre').textContent = JSON.stringify(r,null,2);
-    }
-  }catch(e){ const id = kind==='logs'?'fz-logs-pre':('fz-'+kind+'-pre'); if($(id)) $(id).textContent='Fehler: '+e.message; }
-}
-$('#btn-fz-logs')?.addEventListener('click', () => loadFz('logs'));
-$('#fz-log-filter')?.addEventListener('change', () => loadFz('logs'));
-
-async function refreshCapture(){
-  try{
-    const st = await api('/api/capture/status');
-    const list = await api('/api/capture/list');
-    $('#cap-status').textContent = st.running ? 'running' : (st.status||'idle');
-    $('#cap-status').className = 'badge ' + (st.running?'badge-ok':'badge-muted');
-    $('#cap-live').textContent = st.running ? `Capture aktiv: ${st.iface||''} seit ${st.started||''}` : '';
-    const files = list.files || list.captures || list || [];
-    const arr = Array.isArray(files) ? files : Object.values(files);
-    if(!arr.length){ $('#cap-list').innerHTML='<div class="empty">Keine Captures</div>'; return; }
-    $('#cap-list').innerHTML = arr.map(f => {
-      const name = f.name || f.file || f;
-      const size = f.size ? (f.size/1024).toFixed(1)+' KB' : '';
-      return `<div class="row" style="justify-content:space-between;padding:.4rem 0;border-bottom:1px solid var(--border)">
-        <span class="mono">${name}</span> <span class="muted">${size}</span>
-        <div class="row">
-          <button class="btn btn-sm" data-cap-dl="${name}">Download</button>
-          <button class="btn btn-sm" data-cap-an="${name}">Analyse</button>
-          <button class="btn btn-sm btn-danger" data-cap-del="${name}">Löschen</button>
-        </div>
-      </div>`;
-    }).join('');
-  }catch(e){ $('#cap-list').innerHTML=`<div class="empty">${e.message}</div>`; }
-}
-$('#cap-start')?.addEventListener('click', async () => {
-  const iface = $('#cap-iface').value;
-  const duration_sec = parseInt($('#cap-duration').value||'60',10);
-  const r = await api('/api/capture/start',{method:'POST',body:{iface,duration_sec}});
-  toast(r.message||'Started'); refreshCapture();
-});
-$('#cap-stop')?.addEventListener('click', async () => { await api('/api/capture/stop',{method:'POST',body:{}}); toast('Stop'); refreshCapture(); });
-document.addEventListener('click', async (ev) => {
-  const t = ev.target;
-  if(t.dataset?.capDl){ window.open('/api/capture/download/'+encodeURIComponent(t.dataset.capDl), '_blank'); }
-  if(t.dataset?.capAn){
-    toast('Analyse…');
-    const r = await api('/api/capture/analyze',{method:'POST',body:{name:t.dataset.capAn,limit:40}});
-    let out = '';
-    if(r.protocol_hierarchy) out += '=== Protocol Hierarchy ===\n'+r.protocol_hierarchy+'\n\n';
-    if(r.endpoints) out += '=== Endpoints / Top Talkers ===\n'+r.endpoints+'\n\n';
-    if(r.preview) out += '=== Preview ===\n'+r.preview;
-    if(r.error) out += '\nError: '+r.error;
-    if(r.message) out += '\n'+r.message;
-    $('#cap-analysis').textContent = out || JSON.stringify(r,null,2);
-  }
-  if(t.dataset?.capDel){ if(!confirm('Löschen?'))return; await api('/api/capture/delete',{method:'POST',body:{name:t.dataset.capDel}}); refreshCapture(); }
-});
-setInterval(() => { if($('#panel-capture')?.classList.contains('active')) refreshCapture(); }, 4000);
-
-async function refreshWhitelist(){
-  try{
-    const r = await api('/api/whitelist');
-    const list = r.whitelist || r.entries || r || [];
-    const arr = Array.isArray(list) ? list : Object.keys(list);
-    const box = $('#wl-list');
-    if(!arr.length){ box.innerHTML='<div class="empty">Leer</div>'; return; }
-    box.innerHTML = arr.map(x => {
-      const v = typeof x === 'string' ? x : (x.ip||x.mac||JSON.stringify(x));
-      return `<div class="row" style="justify-content:space-between;padding:.4rem 0;border-bottom:1px solid var(--border)">
-        <code>${v}</code>
-        <button class="btn btn-sm" data-wl-toggle="${v}">Entfernen</button>
-      </div>`;
-    }).join('');
-  }catch(e){ $('#wl-list').innerHTML=`<div class="empty">${e.message}</div>`; }
-}
-$('#btn-wl-add')?.addEventListener('click', async () => {
-  const v = $('#wl-entry').value.trim();
-  if(!v) return;
-  const body = v.includes(':') || v.includes('-') ? {mac:v} : {ip:v};
-  await api('/api/whitelist',{method:'POST',body});
-  $('#wl-entry').value=''; toast('Whitelist aktualisiert');
-  refreshWhitelist();
-});
-document.addEventListener('click', async (ev) => {
-  if(ev.target.dataset?.wlToggle){
-    const v = ev.target.dataset.wlToggle;
-    const body = v.includes(':') || v.includes('-') ? {mac:v} : {ip:v};
-    await api('/api/whitelist',{method:'POST',body});
-    refreshWhitelist();
-  }
-});
-
-async function refreshConfig(){
-  try{
-    const [eff, st] = await Promise.all([api('/api/config/effective').catch(()=>({})), api('/api/status')]);
-    $('#cfg-pre').textContent = JSON.stringify(eff, null, 2);
-    $('#status-pre').textContent = JSON.stringify(st, null, 2);
-    if(eff.version) $('#ver-badge').textContent = eff.version;
-  }catch(e){ $('#cfg-pre').textContent = e.message; }
-}
-$('#cfg-scan')?.addEventListener('click', () => $('#ov-scan')?.click());
-$('#cfg-perimeter')?.addEventListener('click', async () => { await api('/api/security/perimeter',{method:'POST',body:{}}); toast('Perimeter OK'); });
-$('#cfg-threat')?.addEventListener('click', async () => { await api('/api/security/threat-intel',{method:'POST',body:{}}); toast('Threat-Intel OK'); });
-
-showTab('overview');
-setInterval(() => { if($('#panel-overview')?.classList.contains('active')) refreshOverview(); }, 15000);
+/* PLACEHOLDER - full script follows in next commit if truncated */
+(function(){
+"use strict";
+const $=s=>document.querySelector(s),$$=s=>Array.from(document.querySelectorAll(s));
+function esc(s){if(s==null)return"";return String(s).replace(/&/g,"&").replace(/</g,"<").replace(/>/g,">").replace(/"/g,""").replace(/'/g,"&#39;");}
+function preferredTheme(){const s=localStorage.getItem("ng-theme");if(s==="light"||s==="dark")return s;return matchMedia("(prefers-color-scheme: light)").matches?"light":"dark";}
+function applyTheme(t){document.documentElement.setAttribute("data-theme",t);const m=document.querySelector('meta[name="theme-color"]');if(m)m.content=t==="light"?"#f1f5f9":"#0b1220";}
+applyTheme(preferredTheme());
+function toggleTheme(){const c=document.documentElement.getAttribute("data-theme")==="light"?"dark":"light";localStorage.setItem("ng-theme",c);applyTheme(c);}
+$("#theme-toggle")?.addEventListener("click",toggleTheme);
+$("#theme-toggle-side")?.addEventListener("click",toggleTheme);
+window.__BASE__=(function(){try{let p=location.pathname||"/";if(p.endsWith("/"))p=p.slice(0,-1);const m=p.match(/^(.*\/ingress\/[^/]+)/i)||p.match(/^(.*\/hassio_ingress\/[^/]+)/i);if(m)return m[1];if(p&&p!=="/"){const i=p.lastIndexOf("/");if(i>0)return p.slice(0,i);}return"";}catch(_){return"";}})();
+function apiUrl(path){if(!path.startsWith("/"))path="/"+path;return(window.__BASE__||"")+path;}
+function toast(msg,ms){const t=$("#toast");t.textContent=msg;t.classList.add("show");clearTimeout(t._to);t._to=setTimeout(()=>t.classList.remove("show"),ms||2200);}
+let dlgResolve=null;
+function confirmDlg(title,msg,okLabel){return new Promise(r=>{dlgResolve=r;$("#dlg-title").textContent=title||"Bestätigen";$("#dlg-msg").textContent=msg||"";$("#dlg-ok").textContent=okLabel||"OK";$("#confirm-dlg").showModal();});}
+$("#dlg-cancel")?.addEventListener("click",()=>{$("#confirm-dlg").close();if(dlgResolve)dlgResolve(false);dlgResolve=null;});
+$("#dlg-ok")?.addEventListener("click",()=>{$("#confirm-dlg").close();if(dlgResolve)dlgResolve(true);dlgResolve=null;});
+async function api(path,opts){opts=opts||{};const o={method:opts.method||"GET",headers:{"Content-Type":"application/json",Accept:"application/json"}};if(opts.body)o.body=JSON.stringify(opts.body);const r=await fetch(apiUrl(path),o);const text=await r.text();let data;try{data=JSON.parse(text);}catch(_){data={raw:text};}if(!r.ok)throw new Error(data.error||data.message||text||String(r.status));return data;}
+let currentTab="overview",searchFocused=false,sevFilter="all",devFilter="all",devicesCache=[];
+function showTab(name){currentTab=name;$$("[data-tab]").forEach(el=>{const on=el.dataset.tab===name;el.classList.toggle("active",on);});$$(".panel").forEach(p=>p.classList.toggle("active",p.dataset.panel===name));if(name==="overview")refreshOverview();if(name==="devices")refreshDevices();if(name==="access"){refreshBlocked();refreshWhitelist();}if(name==="security")refreshSecurity();if(name==="fritz")refreshFritz();if(name==="traffic")refreshCapture();if(name==="system")refreshConfig();}
+document.addEventListener("click",ev=>{const t=ev.target.closest("[data-tab]");if(t&&t.dataset.tab)showTab(t.dataset.tab);});
+$("#dev-filter")?.addEventListener("focus",()=>{searchFocused=true;});
+$("#dev-filter")?.addEventListener("blur",()=>{searchFocused=false;});
+$("#dev-filter")?.addEventListener("input",()=>renderDevices());
+$$("#dev-chips .chip").forEach(c=>c.addEventListener("click",()=>{devFilter=c.dataset.filter;$$("#dev-chips .chip").forEach(x=>x.classList.toggle("active",x===c));renderDevices();}));
+$$("#sev-chips .chip").forEach(c=>c.addEventListener("click",()=>{sevFilter=c.dataset.sev;$$("#sev-chips .chip").forEach(x=>x.classList.toggle("active",x===c));refreshSecurity();}));
+function setSub(msg){const a=$("#header-sub"),b=$("#header-sub-m");if(a)a.textContent=msg;if(b)b.textContent=msg;}
+function countBy(list,fn){const m={};list.forEach(d=>{const k=fn(d)||"—";m[k]=(m[k]||0)+1;});return Object.entries(m).sort((a,b)=>b[1]-a[1]).slice(0,6);}
+function renderBars(el,entries){if(!entries.length){el.innerHTML='<div class="empty">Keine Daten</div>';return;}const max=Math.max(...entries.map(e=>e[1]),1);el.innerHTML=entries.map(([name,n])=>`<div class="bar-row"><span class="name" title="${esc(name)}">${esc(name)}</span><div class="track"><div class="fill" style="width:${Math.round((n/max)*100)}%"></div></div><span class="n">${n}</span></div>`).join("");}
+function devicePills(d){const pills=[];if(d.blocked)pills.push('<span class="badge badge-danger">gesperrt</span>');if(d.critical)pills.push('<span class="badge badge-crit">kritisch</span>');if(d.whitelisted)pills.push('<span class="badge badge-ok">WL</span>');pills.push(d.active?'<span class="badge badge-ok">aktiv</span>':'<span class="badge badge-muted">offline</span>');return pills.join(" ");}
+async function refreshOverview(){try{const[st,ov,sec,known,blocked]=await Promise.all([api("/api/status").catch(()=>({})),api("/api/overview").catch(()=>({})),api("/api/security").catch(()=>({})),api("/api/known"),api("/api/blocked").catch(()=>({}))]);const devices=Object.values(known.devices||known||{});devicesCache=devices;const active=devices.filter(d=>d.active).length,offline=devices.length-active,crit=devices.filter(d=>d.critical).length,bl=blocked.count||Object.keys(blocked.devices||{}).length||devices.filter(d=>d.blocked).length,total=known.count||devices.length;$("#overview-stats").innerHTML=`<div class="stat"><div class="val">${total}</div><div class="lbl">Geräte</div></div><div class="stat"><div class="val" style="color:var(--ok)">${active}</div><div class="lbl">Aktiv</div></div><div class="stat"><div class="val" style="color:var(--crit)">${crit}</div><div class="lbl">Kritisch</div></div><div class="stat"><div class="val" style="color:var(--danger)">${bl}</div><div class="lbl">Gesperrt</div></div>`;const pct=total?Math.round((active/total)*100):0;const donut=$("#donut-active");donut.style.setProperty("--p",pct+"%");donut.setAttribute("data-label",pct+"%");$("#donut-legend").innerHTML=`<div><strong>${active}</strong> aktiv</div><div><strong>${offline}</strong> offline</div>`;renderBars($("#bars-vendor"),countBy(devices,d=>d.vendor||d.manufacturer||"Unbekannt"));renderBars($("#bars-iface"),countBy(devices,d=>d.interface||d.iface||d.connection||"LAN"));const events=(sec.events||[]).slice(0,10);const high=events.filter(e=>/high|crit|danger/i.test(String(e.severity||e.level||e.type||""))).length;const banner=$("#status-banner");if(high||crit>0){banner.className="banner danger";$("#banner-title").textContent="Aufmerksamkeit nötig";$("#banner-sub").textContent=`${high||crit} kritische Hinweise`;}else if(events.length){banner.className="banner warn";$("#banner-title").textContent="Aktivität erkannt";$("#banner-sub").textContent=`${events.length} aktuelle Ereignisse`;}else{banner.className="banner ok";$("#banner-title").textContent="Alles in Ordnung";$("#banner-sub").textContent="Keine kritischen Ereignisse";}$("#overview-events").innerHTML=events.length?events.map(e=>`<div class="event-item"><strong>${esc(e.type||e.event||"event")}</strong><span>${esc(e.ip||e.message||"")}</span><span class="muted">${esc(e.ts||e.time||"")}</span></div>`).join(""):'<div class="empty">Keine Events</div>';const recent=devices.slice().sort((a,b)=>String(b.last_seen||b.seen||"").localeCompare(String(a.last_seen||a.seen||""))).slice(0,6);$("#overview-recent").innerHTML=recent.length?recent.map(d=>`<div class="device-card"><div class="title"><strong class="mono">${esc(d.ip||"–")}</strong>${devicePills(d)}</div><div class="meta">${esc(d.hostname||d.name||"—")} · ${esc(d.mac||"")}</div></div>`).join(""):'<div class="empty">—</div>';const badges=[];badges.push(`<span class="badge ${st.fritz_ok===true?"badge-ok":st.fritz_ok===false?"badge-danger":"badge-muted"}">Fritz ${st.fritz_ok===true?"OK":st.fritz_ok===false?"Err":"?"}</span>`);const ver=st.version||ov.version||"2.4.0";badges.push(`<span class="badge badge-muted">${esc(ver)}</span>`);$("#status-badges").innerHTML=badges.join("");$("#ver-badge").textContent=ver;$("#ver-side").textContent=ver;setSub(st.mode||ov.mode||"LAN-Monitor aktiv");}catch(e){toast("Overview: "+e.message);setSub("Fehler: "+e.message);}}
+function renderDevices(){let list=devicesCache.slice();const q=($("#dev-filter")?.value||"").toLowerCase().trim();if(devFilter==="active")list=list.filter(d=>d.active);if(devFilter==="offline")list=list.filter(d=>!d.active);if(devFilter==="crit")list=list.filter(d=>d.critical);if(devFilter==="blocked")list=list.filter(d=>d.blocked);if(q)list=list.filter(d=>[d.ip,d.mac,d.hostname,d.name,d.vendor].join(" ").toLowerCase().includes(q));list.sort((a,b)=>String(a.ip||"").localeCompare(String(b.ip||""),undefined,{numeric:true}));$("#dev-count").textContent=String(list.length);if(!list.length){$("#device-list").innerHTML='<div class="empty">Keine Geräte</div>';return;}$("#device-list").innerHTML=list.map(d=>{const ip=esc(d.ip||""),mac=esc(d.mac||""),host=esc(d.hostname||d.name||"—"),vendor=esc(d.vendor||"");return`<div class="device-card"><div class="title"><strong class="mono">${ip||"–"}</strong><div>${devicePills(d)}</div></div><div class="meta">${host}${vendor?" · "+vendor:""}<br>${mac}</div><div class="row" style="margin-top:.5rem">${d.blocked?`<button type="button" class="btn btn-sm btn-ok" data-unblock="${ip}">Entsperren</button>`:`<button type="button" class="btn btn-sm btn-danger" data-block="${ip}">Sperren</button>`}<button type="button" class="btn btn-sm ghost" data-wl="${mac||ip}">Whitelist</button></div></div>`;}).join("");}
+async function refreshDevices(){try{const known=await api("/api/known");devicesCache=Object.values(known.devices||known||{});const all=devicesCache;$("#c-all").textContent=String(all.length);$("#c-active").textContent=String(all.filter(d=>d.active).length);$("#c-offline").textContent=String(all.filter(d=>!d.active).length);$("#c-crit").textContent=String(all.filter(d=>d.critical).length);$("#c-blocked").textContent=String(all.filter(d=>d.blocked).length);renderDevices();}catch(e){$("#device-list").innerHTML=`<div class="empty">${esc(e.message)}</div>`;}}
+$("#btn-refresh-dev")?.addEventListener("click",refreshDevices);
+document.addEventListener("click",async ev=>{const t=ev.target;if(t.dataset?.block){const ip=t.dataset.block;if(!(await confirmDlg("WAN sperren",`IP ${ip} für WAN sperren?`,"Sperren")))return;try{await api("/api/block",{method:"POST",body:{ip}});toast("Gesperrt: "+ip);refreshDevices();refreshBlocked();}catch(e){toast(e.message);}}if(t.dataset?.unblock){const ip=t.dataset.unblock;try{await api("/api/unblock",{method:"POST",body:{ip}});toast("Entsperrt: "+ip);refreshDevices();refreshBlocked();}catch(e){toast(e.message);}}if(t.dataset?.wl){const v=t.dataset.wl;const body=v.includes(":")||v.includes("-")?{mac:v}:{ip:v};try{await api("/api/whitelist",{method:"POST",body});toast("Whitelist aktualisiert");refreshDevices();refreshWhitelist();}catch(e){toast(e.message);}}});
+async function refreshBlocked(){try{const blocked=await api("/api/blocked");const devices=blocked.devices||{};const list=Array.isArray(devices)?devices:Object.entries(devices).map(([ip,v])=>typeof v==="object"?{ip,...v}:{ip,reason:v});$("#bl-count").textContent=String(list.length||blocked.count||0);if(!list.length){$("#blocked-list").innerHTML='<div class="empty">Keine Sperren</div>';return;}$("#blocked-list").innerHTML=list.map(d=>{const ip=esc(d.ip||d);return`<div class="device-card"><div class="title"><strong class="mono">${ip}</strong><button type="button" class="btn btn-sm btn-ok" data-unblock="${ip}">Entsperren</button></div><div class="meta">${esc(d.reason||d.hostname||"")}</div></div>`;}).join("");}catch(e){$("#blocked-list").innerHTML=`<div class="empty">${esc(e.message)}</div>`;}}
+$("#btn-manual-block")?.addEventListener("click",async()=>{const ip=($("#manual-ip").value||"").trim();if(!ip)return;if(!(await confirmDlg("WAN sperren",`IP ${ip} sperren?`,"Sperren")))return;try{await api("/api/block",{method:"POST",body:{ip}});$("#manual-ip").value="";toast("Gesperrt");refreshBlocked();}catch(e){toast(e.message);}});
+async function refreshWhitelist(){try{const r=await api("/api/whitelist");const list=r.whitelist||r.entries||r||[];const arr=Array.isArray(list)?list:Object.keys(list);if(!arr.length){$("#wl-list").innerHTML='<div class="empty">Leer</div>';return;}$("#wl-list").innerHTML=arr.map(x=>{const v=typeof x==="string"?x:x.ip||x.mac||JSON.stringify(x);return`<div class="device-card"><div class="title"><code class="mono">${esc(v)}</code><button type="button" class="btn btn-sm ghost" data-wl-toggle="${esc(v)}">Entfernen</button></div></div>`;}).join("");}catch(e){$("#wl-list").innerHTML=`<div class="empty">${esc(e.message)}</div>`;}}
+$("#btn-wl-add")?.addEventListener("click",async()=>{const v=($("#wl-entry").value||"").trim();if(!v)return;const body=v.includes(":")||v.includes("-")?{mac:v}:{ip:v};try{await api("/api/whitelist",{method:"POST",body});$("#wl-entry").value="";toast("Hinzugefügt");refreshWhitelist();}catch(e){toast(e.message);}});
+document.addEventListener("click",async ev=>{if(ev.target.dataset?.wlToggle){const v=ev.target.dataset.wlToggle;const body=v.includes(":")||v.includes("-")?{mac:v}:{ip:v};try{await api("/api/whitelist",{method:"POST",body});refreshWhitelist();}catch(e){toast(e.message);}}});
+async function refreshSecurity(){try{const[sec,st]=await Promise.all([api("/api/security").catch(()=>({})),api("/api/status").catch(()=>({}))]);const events=sec.events||[];const openPorts=sec.open_ports||sec.ports||[];const publicIp=sec.public_ip||st.public_ip||"—";$("#sec-stats").innerHTML=`<div class="stat"><div class="val" style="font-size:1rem">${esc(publicIp)}</div><div class="lbl">Öffentliche IP</div></div><div class="stat"><div class="val">${Array.isArray(openPorts)?openPorts.length:"—"}</div><div class="lbl">Offene Ports</div></div><div class="stat"><div class="val">${sec.threat_hits||sec.threats||0}</div><div class="lbl">Threat-Hits</div></div><div class="stat"><div class="val">${events.length}</div><div class="lbl">Ereignisse</div></div>`;let filtered=events;if(sevFilter!=="all")filtered=events.filter(e=>String(e.severity||e.level||"").toLowerCase().includes(sevFilter));$("#sec-ev-count").textContent=String(filtered.length);$("#sec-events").innerHTML=filtered.length?filtered.slice(0,80).map(e=>`<div class="event-item"><span class="badge badge-${/high|crit/i.test(String(e.severity||e.level||""))?"danger":"muted"}">${esc(e.severity||e.level||"info")}</span><strong>${esc(e.type||e.event||"event")}</strong><span>${esc(e.ip||e.message||"")}</span><span class="muted">${esc(e.ts||e.time||"")}</span></div>`).join(""):'<div class="empty">Keine Events</div>';}catch(e){$("#sec-events").innerHTML=`<div class="empty">${esc(e.message)}</div>`;}}
+$("#sec-perimeter")?.addEventListener("click",async()=>{toast("Perimeter…");try{await api("/api/security/perimeter",{method:"POST",body:{}});toast("Perimeter OK");refreshSecurity();}catch(e){toast(e.message);}});
+$("#sec-threat")?.addEventListener("click",async()=>{toast("Threat-Intel…");try{await api("/api/security/threat-intel",{method:"POST",body:{}});toast("OK");refreshSecurity();}catch(e){toast(e.message);}});
+$("#sec-deep")?.addEventListener("click",async()=>{toast("Deep Scan…");try{const r=await api("/api/security/deep-scan",{method:"POST",body:{}});$("#deep-result").textContent=JSON.stringify(r,null,2);toast("Deep Scan fertig");}catch(e){toast(e.message);}});
+$("#btn-check-ip")?.addEventListener("click",async()=>{const ip=($("#check-ip").value||"").trim();if(!ip)return;const box=$("#check-ip-result");box.style.display="block";box.textContent="Prüfe…";try{const r=await api("/api/security/check-ip",{method:"POST",body:{ip}});const ok=r.ok!==false&&!r.malicious&&!r.listed;box.textContent=(ok?"✓ Unauffällig\n":"⚠ Auffällig\n")+JSON.stringify(r,null,2);}catch(e){box.textContent="Fehler: "+e.message;}});
+$("#ov-scan")?.addEventListener("click",async()=>{toast("Scan…");try{await api("/api/scan/force",{method:"POST",body:{}});toast("Scan gestartet");refreshOverview();}catch(e){toast(e.message);}});
+$("#ov-perimeter")?.addEventListener("click",()=>$("#sec-perimeter")?.click());
+$("#ov-threat")?.addEventListener("click",()=>$("#sec-threat")?.click());
+$("#ov-deep")?.addEventListener("click",async()=>{await $("#sec-deep")?.click();showTab("security");});
+function renderKv(el,obj){if(!obj||typeof obj!=="object"){el.innerHTML="<dd>—</dd>";return;}const entries=Object.entries(obj);if(!entries.length){el.innerHTML="<dd>—</dd>";return;}el.innerHTML=entries.map(([k,v])=>{let val=v;if(val!=null&&typeof val==="object")val=JSON.stringify(val);return`<dt>${esc(k)}</dt><dd>${esc(val)}</dd>`;}).join("");}
+async function refreshFritz(){try{const[sum,wan,wlan,ports]=await Promise.all([api("/api/fritz/summary").catch(()=>({})),api("/api/fritz/wan").catch(()=>({})),api("/api/fritz/wlan").catch(()=>({})),api("/api/fritz/ports").catch(()=>({}))]);$("#fz-summary").textContent=typeof sum==="string"?sum:JSON.stringify(sum,null,2);$("#fz-wan-raw").textContent=JSON.stringify(wan,null,2);const wanObj=wan.data||wan.wan||wan;renderKv($("#fz-wan"),typeof wanObj==="object"&&!Array.isArray(wanObj)?wanObj:{status:JSON.stringify(wanObj)});$("#fz-wlan-raw").textContent=JSON.stringify(wlan,null,2);const wl=wlan.networks||wlan.wlan||wlan.data||wlan;if(Array.isArray(wl)&&wl.length){const keys=Object.keys(wl[0]||{}).slice(0,6);$("#fz-wlan").innerHTML=`<table><thead><tr>${keys.map(k=>`<th>${esc(k)}</th>`).join("")}</tr></thead><tbody>${wl.map(row=>`<tr>${keys.map(k=>`<td>${esc(row[k])}</td>`).join("")}</tr>`).join("")}</tbody></table>`;}else{$("#fz-wlan").innerHTML=`<pre class="pre">${esc(JSON.stringify(wlan,null,2))}</pre>`;}$("#fz-ports-raw").textContent=JSON.stringify(ports,null,2);const pl=ports.mappings||ports.ports||ports.data||ports;if(Array.isArray(pl)&&pl.length){const keys=Object.keys(pl[0]||{}).slice(0,7);$("#fz-ports").innerHTML=`<table><thead><tr>${keys.map(k=>`<th>${esc(k)}</th>`).join("")}</tr></thead><tbody>${pl.map(row=>`<tr>${keys.map(k=>`<td>${esc(row[k])}</td>`).join("")}</tr>`).join("")}</tbody></table>`;}else{$("#fz-ports").innerHTML=`<pre class="pre">${esc(JSON.stringify(ports,null,2))}</pre>`;}}catch(e){toast("Fritz: "+e.message);}}
+$("#btn-fz-logs")?.addEventListener("click",async()=>{const f=$("#fz-log-filter")?.value||"all";try{const r=await api("/api/fritz/logs?filter="+encodeURIComponent(f));$("#fz-logs-raw").textContent=JSON.stringify(r,null,2);const logs=r.logs||r.entries||r.events||(Array.isArray(r)?r:[]);if(Array.isArray(logs)&&logs.length){$("#fz-logs").innerHTML=logs.slice(0,100).map(e=>{if(typeof e==="string")return`<div class="event-item">${esc(e)}</div>`;return`<div class="event-item"><span class="muted">${esc(e.ts||e.time||"")}</span> ${esc(e.message||e.text||e.msg||JSON.stringify(e))}</div>`;}).join("");}else{$("#fz-logs").innerHTML=`<pre class="pre">${esc(typeof r==="string"?r:JSON.stringify(r,null,2))}</pre>`;}}catch(e){$("#fz-logs").innerHTML=`<div class="empty">${esc(e.message)}</div>`;}});
+async function refreshCapture(){try{const[st,list]=await Promise.all([api("/api/capture/status").catch(()=>({})),api("/api/capture/list").catch(()=>({captures:[]}))]);const running=st.running||st.status==="running";const badge=$("#cap-status");badge.textContent=st.status||(running?"running":"idle");badge.className="badge "+(running?"badge-ok":"badge-muted");$("#cap-live").textContent=st.message||st.iface||"";const caps=list.captures||list||[];const arr=Array.isArray(caps)?caps:[];if(!arr.length){$("#cap-list").innerHTML='<div class="empty">Keine Captures</div>';return;}$("#cap-list").innerHTML=arr.map(c=>{const name=typeof c==="string"?c:c.name||c.file||"";const size=c.size!=null?c.size+" B":"";return`<div class="device-card"><div class="title"><strong class="mono">${esc(name)}</strong><span class="muted">${esc(size)}</span></div><div class="row" style="margin-top:.4rem"><button type="button" class="btn btn-sm" data-cap-dl="${esc(name)}">Download</button><button type="button" class="btn btn-sm ghost" data-cap-an="${esc(name)}">Analyse</button><button type="button" class="btn btn-sm btn-danger" data-cap-del="${esc(name)}">Löschen</button></div></div>`;}).join("");}catch(e){$("#cap-list").innerHTML=`<div class="empty">${esc(e.message)}</div>`;}}
+$("#cap-start")?.addEventListener("click",async()=>{const iface=$("#cap-iface").value;const duration_sec=parseInt($("#cap-duration").value||"60",10);try{const r=await api("/api/capture/start",{method:"POST",body:{iface,duration_sec}});toast(r.message||"Started");refreshCapture();}catch(e){toast(e.message);}});
+$("#cap-stop")?.addEventListener("click",async()=>{try{await api("/api/capture/stop",{method:"POST",body:{}});toast("Stop");refreshCapture();}catch(e){toast(e.message);}});
+document.addEventListener("click",async ev=>{const t=ev.target;if(t.dataset?.capDl){window.open(apiUrl("/api/capture/download/"+encodeURIComponent(t.dataset.capDl)),"_blank");}if(t.dataset?.capAn){toast("Analyse…");try{const r=await api("/api/capture/analyze",{method:"POST",body:{name:t.dataset.capAn,limit:40}});let out="";if(r.protocol_hierarchy)out+="=== Protocol Hierarchy ===\n"+r.protocol_hierarchy+"\n\n";if(r.endpoints)out+="=== Endpoints / Top Talkers ===\n"+r.endpoints+"\n\n";if(r.preview)out+="=== Preview ===\n"+r.preview;if(r.error)out+="\nError: "+r.error;if(r.message)out+="\n"+r.message;$("#cap-analysis").textContent=out||JSON.stringify(r,null,2);}catch(e){toast(e.message);}}if(t.dataset?.capDel){if(!(await confirmDlg("Capture löschen",`„${t.dataset.capDel}“ löschen?`,"Löschen")))return;try{await api("/api/capture/delete",{method:"POST",body:{name:t.dataset.capDel}});refreshCapture();}catch(e){toast(e.message);}}});
+async function refreshConfig(){try{const[eff,st]=await Promise.all([api("/api/config/effective").catch(()=>({})),api("/api/status").catch(()=>({}))]);renderKv($("#cfg-kv"),eff);renderKv($("#status-kv"),st);if(eff.version){$("#ver-badge").textContent=eff.version;$("#ver-side").textContent=eff.version;}}catch(e){$("#cfg-kv").innerHTML=`<dd>${esc(e.message)}</dd>`;}}
+$("#cfg-scan")?.addEventListener("click",()=>$("#ov-scan")?.click());
+$("#cfg-perimeter")?.addEventListener("click",()=>$("#sec-perimeter")?.click());
+$("#cfg-threat")?.addEventListener("click",()=>$("#sec-threat")?.click());
+setInterval(()=>{if(document.hidden)return;if($("#confirm-dlg")?.open)return;if(searchFocused)return;if(currentTab==="fritz")return;if(currentTab==="overview")refreshOverview();if(currentTab==="devices")refreshDevices();if(currentTab==="security")refreshSecurity();if(currentTab==="access"){refreshBlocked();refreshWhitelist();}if(currentTab==="system")refreshConfig();},15000);
+setInterval(()=>{if(document.hidden)return;if(currentTab==="traffic")refreshCapture();},4000);
+showTab("overview");
+})();
 </script>
 </body>
 </html>
