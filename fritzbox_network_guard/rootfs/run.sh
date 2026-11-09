@@ -1,5 +1,5 @@
 #!/usr/bin/with-contenv bashio
-bashio::log.info "Starting FritzBox Network Guard 2.4.1..."
+bashio::log.info "Starting FritzBox Network Guard 2.4.3..."
 
 export FRITZBOX_HOST=$(bashio::config 'fritzbox_host')
 export FRITZBOX_USER=$(bashio::config 'fritzbox_user')
@@ -91,6 +91,64 @@ if sec.exists():
     except Exception as exp:
         print(f"security patch failed: {exp}", file=sys.stderr)
 PY
+
+# Inject FritzBox-Reset button into System panel (if not already present)
+if [ -f "${APP_HOME}/ui.html" ] && ! grep -q 'id="cfg-reset-fritz"' "${APP_HOME}/ui.html" 2>/dev/null; then
+  python3 - <<'UIPY' || true
+from pathlib import Path
+ui = Path("/opt/network-guard/ui.html")
+html = ui.read_text(encoding="utf-8", errors="replace")
+if 'id="cfg-reset-fritz"' in html:
+    print("Reset button already present", flush=True)
+else:
+    btn_html = (
+        '            <button type="button" class="btn btn-danger" id="cfg-reset-fritz" style="margin-top:.5rem">'
+        'FritzBox Reset (Sperren + MAC-Filter weg)</button>\n'
+        '            <p class="muted" style="font-size:.75rem;margin-top:.35rem">'
+        'Hebt alle WAN-Sperren auf und schaltet den MAC-Filter aus. '
+        'Nützlich wenn Geräte (z.B. Handy) nur noch 2,4 GHz sehen.</p>\n'
+    )
+    marker = (
+        '<button type="button" class="btn ghost" id="cfg-threat">Threat-Intel</button>\n'
+        '          </div>\n'
+        '        </div>'
+    )
+    if marker in html:
+        html = html.replace(
+            marker,
+            '<button type="button" class="btn ghost" id="cfg-threat">Threat-Intel</button>\n'
+            '          </div>\n'
+            + btn_html
+            + '        </div>',
+            1,
+        )
+        print("Injected reset button HTML", flush=True)
+    else:
+        print("Marker for reset button not found", flush=True)
+
+    js = (
+        '\n$("#cfg-reset-fritz")?.addEventListener("click",async()=>{\n'
+        '  if(!(await confirmDlg("FritzBox Reset","Alle WAN-Sperren aufheben und MAC-Filter deaktivieren? '
+        'Geräte können danach wieder normal (auch 5 GHz) verbinden.","Reset ausführen"))) return;\n'
+        '  toast("Reset läuft…");\n'
+        '  try{\n'
+        '    const r=await api("/api/reset/fritz",{method:"POST",body:{}});\n'
+        '    toast(r.message||"Reset fertig");\n'
+        '    refreshConfig(); refreshBlocked(); refreshDevices();\n'
+        '  }catch(e){toast("Reset: "+e.message);}\n'
+        '});\n'
+    )
+    target = '$("#cfg-threat")?.addEventListener("click",()=>$("#sec-threat")?.click());'
+    if target in html:
+        html = html.replace(target, target + js, 1)
+        print("Injected reset button JS", flush=True)
+    else:
+        html = html.replace("</script>", js + "\n</script>", 1)
+        print("Injected reset JS at end of script", flush=True)
+    ui.write_text(html, encoding="utf-8")
+    print(f"UI updated, size={ui.stat().st_size}", flush=True)
+UIPY
+fi
 
 if [ -f "${APP_HOME}/ui.html" ]; then
   bashio::log.info "UI ready: $(wc -c < "${APP_HOME}/ui.html") bytes"

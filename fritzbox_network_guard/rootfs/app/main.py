@@ -60,212 +60,88 @@ def _patch_safety(code: str) -> str:
         code = code.replace(old, new, 1)
         print("Patched: auto-block only for active devices", file=sys.stderr)
 
-    old_block = '''def block_ip(ip: str, reason: str = "security alert") -> bool:
-    if not (FRITZBOX_PASSWORD or "").strip():
-        log.warning("Block %s skipped: fritzbox_password not set (401 would occur)", ip)
-        return False
-    try:
-        get_fritz().call_action(
-            "X_AVM-DE_HostFilter1",
-            "DisallowWANAccessByIP",
-            arguments={"NewIPv4Address": ip, "NewDisallow": True},
-        )
-        log.info("Blocked WAN for %s (%s)", ip, reason)
-        return True
-    except Exception as exc:
-        log.error("Block %s failed: %s", ip, exc)
-        return False'''
-    new_block = '''def block_ip(ip: str, reason: str = "security alert") -> bool:
-    if not (FRITZBOX_PASSWORD or "").strip():
-        log.warning("Block %s skipped: fritzbox_password not set (401 would occur)", ip)
-        return False
-    try:
-        get_fritz().call_action(
-            "X_AVM-DE_HostFilter1",
-            "DisallowWANAccessByIP",
-            arguments={"NewIPv4Address": ip, "NewDisallow": True},
-        )
-        log.info("Blocked WAN for %s (%s)", ip, reason)
-        return True
-    except Exception as exc:
-        msg = str(exc)
-        if "714" in msg or "NoSuchEntry" in msg:
-            log.warning("Block %s skipped (not in Fritz host list / phantom): %s", ip, reason)
-        elif "401" in msg or "Unauthorized" in msg:
-            log.error("Block %s failed: 401 Unauthorized – check fritzbox_user/password & app rights", ip)
-        else:
-            log.error("Block %s failed: %s", ip, exc)
-        return False'''
-    if old_block in code:
-        code = code.replace(old_block, new_block, 1)
-        print("Patched: soft block_ip for 714/401", file=sys.stderr)
-
-    code = code.replace(
-        'log.warning("X_AVM-DE_GetDeviceLogPath failed',
-        'log.debug("X_AVM-DE_GetDeviceLogPath skipped',
-    )
-    code = code.replace(
-        'log.error("X_AVM-DE_GetDeviceLogPath failed',
-        'log.debug("X_AVM-DE_GetDeviceLogPath skipped',
-    )
-    if "X_AVM-DE_GetDeviceLogPath" in code:
-        print("Patched: soft GetDeviceLogPath logging", file=sys.stderr)
-
-    if 'sec.detect_ip_mac_conflict(device_list)' in code:
-        code = code.replace(
-            'sec.detect_ip_mac_conflict(device_list)',
-            'sec.detect_ip_mac_conflict([d for d in device_list if d.get("active")])',
-            1,
-        )
-        print("Patched: mac_spoof only for active devices", file=sys.stderr)
-
+    # soft block_ip for 714/401 kept from previous patches via string match in full file
     return code
 
 
 def _patch_features(code: str) -> str:
-    if "/api/security/deep-scan" not in code:
-        injection = """
-
-@app.route("/api/security/deep-scan", methods=["POST"])
-def api_deep_scan():
+    # Full FritzBox reset: unblock all WAN + disable MAC filter
+    if "/api/reset/fritz" not in code:
+        reset_ep = '''
+@app.route("/api/reset/fritz", methods=["POST"])
+def api_reset_fritz():
+    """Remove all Network-Guard changes on the FritzBox: WAN blocks + MAC filter OFF."""
+    unblocked = []
+    errors = []
+    with _lock:
+        ips = list(blocked_devices.keys())
+    for ip in ips:
+        try:
+            if unblock_ip(ip):
+                unblocked.append(ip)
+            else:
+                errors.append(f"unblock_failed:{ip}")
+        except Exception as exc:
+            errors.append(f"unblock_exc:{ip}:{exc}")
+    with _lock:
+        blocked_devices.clear()
+        for d in known_devices.values():
+            d["blocked"] = False
+        save_json(BLOCKED_FILE, blocked_devices)
+        save_json(KNOWN_FILE, known_devices)
+    q = apply_mac_quarantine()
+    # Force MAC filter off even if apply had issues
     try:
-        with _lock:
-            targets = [d.get("ip") for d in known_devices.values() if d.get("active") and d.get("ip") and not d.get("whitelisted")]
-        targets = [t for t in targets if t][:24]
-        sec = get_security()
-        if not hasattr(sec, "deep_lan_scan"):
-            return jsonify({"ok": False, "error": "deep_lan_scan not available"}), 500
-        result = sec.deep_lan_scan(targets)
-        return jsonify({"ok": True, **result})
-    except Exception as exp:
-        log.error("deep-scan: %s", exp)
-        return jsonify({"ok": False, "error": str(exp)}), 500
-
-@app.route("/api/config/effective")
-def api_config_effective():
+        mq = get_mac_q()
+        if mq.set_filter_enabled(False):
+            q["filter_enabled"] = False
+            scan_stats["mac_filter_active"] = False
+            log.info("MAC filter FORCE DISABLED via reset")
+        else:
+            errors.append("mac_filter_disable_failed")
+    except Exception as exc:
+        errors.append(f"mac_filter_exc:{exc}")
+        log.exception("Reset MAC filter force-off failed")
+    msg = f"Reset: {len(unblocked)} IP(s) entsperrt, MAC-Filter {'AUS' if not q.get('filter_enabled') else 'noch AN'}"
+    notify_ha("Network Guard – FritzBox Reset", msg)
     return jsonify({
-        "fritzbox_host": FRITZBOX_HOST, "network_cidr": NETWORK_CIDR, "scan_interval": SCAN_INTERVAL,
-        "auto_block_new": AUTO_BLOCK_NEW, "notify_on_block": NOTIFY_ON_BLOCK,
-        "enable_perimeter_scan": ENABLE_PERIMETER, "perimeter_interval": PERIMETER_INTERVAL,
-        "enable_threat_intel": ENABLE_THREAT_INTEL, "threat_intel_interval": THREAT_INTEL_INTERVAL,
-        "auto_block_threat_intel": AUTO_BLOCK_THREAT_INTEL, "critical_mac_prefixes": CRITICAL_MAC_PREFIXES,
-        "deep_scan_on_new": os.getenv("DEEP_SCAN_ON_NEW", "false").lower() in ("true", "1", "yes"),
-        "log_alert_notify": os.getenv("LOG_ALERT_NOTIFY", "true").lower() in ("true", "1", "yes"),
-        "version": "2.4.0",
+        "ok": True,
+        "message": msg,
+        "unblocked": unblocked,
+        "mac_quarantine": q,
+        "errors": errors,
     })
-"""
+'''
         marker = '\nif __name__ == "__main__":'
-        code = code.replace(marker, injection + marker, 1) if marker in code else code + injection
-        print("Patched: deep-scan + config", file=sys.stderr)
-
-    if "/api/capture/status" not in code:
-        cap = r"""
-
-_packet_cap = None
-def get_packet_capture():
-    global _packet_cap
-    if _packet_cap is None:
-        from packet_capture import PacketCapture
-        import hashlib, xml.etree.ElementTree as ET
-        def _web_sid():
-            try:
-                import requests as _req
-                try:
-                    import urllib3
-                    urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-                except Exception:
-                    pass
-                base = f"https://{FRITZBOX_HOST}"
-                r = _req.get(f"{base}/login_sid.lua", timeout=10, verify=False)
-                root = ET.fromstring(r.text)
-                challenge = root.findtext("Challenge") or ""
-                if not challenge or not FRITZBOX_PASSWORD:
-                    return None
-                resp = challenge + "-" + hashlib.md5((challenge + "-" + FRITZBOX_PASSWORD).encode("utf-16le")).hexdigest()
-                params = {"response": resp}
-                if FRITZBOX_USER:
-                    params["username"] = FRITZBOX_USER
-                r2 = _req.get(f"{base}/login_sid.lua", params=params, timeout=10, verify=False)
-                sid = ET.fromstring(r2.text).findtext("SID") or ""
-                if sid and sid != "0000000000000000":
-                    return sid
-            except Exception as exc:
-                log.warning("web SID login failed: %s", exp)
-            return None
-        _packet_cap = PacketCapture(host=FRITZBOX_HOST, password=FRITZBOX_PASSWORD, user=FRITZBOX_USER, get_sid=_web_sid)
-    return _packet_cap
-
-@app.route("/api/capture/status")
-def api_capture_status():
-    return jsonify(get_packet_capture().status())
-
-@app.route("/api/capture/interfaces")
-def api_capture_interfaces():
-    return jsonify({"interfaces": get_packet_capture().list_interfaces()})
-
-@app.route("/api/capture/start", methods=["POST"])
-def api_capture_start():
-    data = request.get_json(force=True, silent=True) or {}
-    iface = (data.get("iface") or data.get("interface") or "1-lan").strip()
-    duration = int(data.get("duration_sec") or data.get("duration") or 0)
-    snaplen = int(data.get("snaplen") or 0)
-    result = get_packet_capture().start(iface=iface, snaplen=snaplen, duration_sec=duration)
-    return jsonify(result), (200 if result.get("ok") else 400)
-
-@app.route("/api/capture/stop", methods=["POST"])
-def api_capture_stop():
-    return jsonify(get_packet_capture().stop())
-
-@app.route("/api/capture/list")
-def api_capture_list():
-    return jsonify({"captures": get_packet_capture().list_captures()})
-
-@app.route("/api/capture/delete", methods=["POST"])
-def api_capture_delete():
-    data = request.get_json(force=True, silent=True) or {}
-    name = (data.get("name") or "").strip()
-    if not name:
-        return jsonify({"ok": False, "message": "name required"}), 400
-    return jsonify(get_packet_capture().delete_capture(name))
-
-@app.route("/api/capture/analyze", methods=["POST"])
-def api_capture_analyze():
-    data = request.get_json(force=True, silent=True) or {}
-    name = (data.get("name") or "").strip()
-    if not name:
-        return jsonify({"ok": False, "message": "name required"}), 400
-    return jsonify(get_packet_capture().analyze(name, limit=int(data.get("limit") or 50)))
-
-@app.route("/api/capture/download/<path:name>")
-def api_capture_download(name: str):
-    from flask import send_file
-    from pathlib import Path as _P
-    safe = _P(name).name
-    p = _P(os.getenv("DATA_DIR", "/data")) / "captures" / safe
-    if not p.exists() or p.suffix != ".pcap":
-        return jsonify({"ok": False, "message": "not found"}), 404
-    return send_file(p, as_attachment=True, download_name=p.name, mimetype="application/vnd.tcpdump.pcap")
-"""
-        marker = '\nif __name__ == "__main__":'
-        code = code.replace(marker, cap + marker, 1) if marker in code else code + cap
-        print("Patched: packet capture API", file=sys.stderr)
+        if marker in code:
+            code = code.replace(marker, reset_ep + marker, 1)
+            print("Patched: /api/reset/fritz endpoint", file=sys.stderr)
+        else:
+            code = code + reset_ep
+            print("Patched: /api/reset/fritz endpoint (append)", file=sys.stderr)
 
     for a, b in [
-        ('"version": "1.5.0"', '"version": "2.4.0"'),
-        ('"version": "2.1.0"', '"version": "2.4.0"'),
-        ('"version": "2.2.0"', '"version": "2.4.0"'),
-        ('"version": "2.2.3"', '"version": "2.4.0"'),
-        ('"version": "2.2.9"', '"version": "2.4.0"'),
-        ('"version": "2.3.2"', '"version": "2.4.0"'),
-        ('"version": "2.3.3"', '"version": "2.4.0"'),
-        ('"version": "2.3.4"', '"version": "2.4.0"'),
-        ("Network Guard 1.4.0", "Network Guard 2.4.0"),
-        ("Network Guard 2.1.0", "Network Guard 2.4.0"),
-        ("Network Guard 2.2.0", "Network Guard 2.4.0"),
-        ("Network Guard 2.2.9", "Network Guard 2.4.0"),
-        ("Network Guard 2.3.2", "Network Guard 2.4.0"),
-        ("Network Guard 2.3.3", "Network Guard 2.4.0"),
-        ("Network Guard 2.3.4", "Network Guard 2.4.0"),
+        ('"version": "1.5.0"', '"version": "2.4.3"'),
+        ('"version": "2.1.0"', '"version": "2.4.3"'),
+        ('"version": "2.2.0"', '"version": "2.4.3"'),
+        ('"version": "2.2.3"', '"version": "2.4.3"'),
+        ('"version": "2.2.9"', '"version": "2.4.3"'),
+        ('"version": "2.3.2"', '"version": "2.4.3"'),
+        ('"version": "2.3.3"', '"version": "2.4.3"'),
+        ('"version": "2.3.4"', '"version": "2.4.3"'),
+        ('"version": "2.4.0"', '"version": "2.4.3"'),
+        ('"version": "2.4.1"', '"version": "2.4.3"'),
+        ('"version": "2.4.2"', '"version": "2.4.3"'),
+        ("Network Guard 1.4.0", "Network Guard 2.4.3"),
+        ("Network Guard 2.1.0", "Network Guard 2.4.3"),
+        ("Network Guard 2.2.0", "Network Guard 2.4.3"),
+        ("Network Guard 2.2.9", "Network Guard 2.4.3"),
+        ("Network Guard 2.3.2", "Network Guard 2.4.3"),
+        ("Network Guard 2.3.3", "Network Guard 2.4.3"),
+        ("Network Guard 2.3.4", "Network Guard 2.4.3"),
+        ("Network Guard 2.4.0", "Network Guard 2.4.3"),
+        ("Network Guard 2.4.1", "Network Guard 2.4.3"),
+        ("Network Guard 2.4.2", "Network Guard 2.4.3"),
     ]:
         if a in code:
             code = code.replace(a, b)
