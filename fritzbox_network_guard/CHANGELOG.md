@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.4.3 – FritzBox Reset (WAN + MAC-Filter)
+- Neuer Endpoint `POST /api/reset/fritz`: alle WAN-Sperren aufheben + MAC-Filter erzwingen AUS
+- System-Tab: roter Button **FritzBox Reset (Sperren + MAC-Filter weg)** mit Bestätigungsdialog
+- Behebt Fälle, in denen Geräte (z.B. Handy) nur noch 2,4 GHz sehen, weil der MAC-Filter aktiv war
+- Nach Reset: Geräte können wieder normal (auch 5 GHz) verbinden
+
 ## 2.4.2 – Update-Erkennung + UI-JS-Fix
 - JS-Syntaxfehler in esc() behoben – Buttons und Tabs reagieren wieder
 - Bottom-Navigation: Touch/Icons zuverlässig (pointer-events, touchend)
@@ -27,8 +33,3 @@
 - Auto-Refresh 15s (sichtbarer Tab, nicht FritzBox, nicht bei Dialog/Suche); Capture 4s
 - Auslieferung: ui_parts/ui_full.gz.b64/NG_POLISH entfernt – eine feste ui.html
 - Barrierefreiheit: Fokus-Stile, aria-label, prefers-reduced-motion
-
-## 2.3.4 – Update-Erkennung + Listen vertikal
-## 2.3.3 – Nur aktive Geräte
-## 2.3.2 – Soft errors + UI polish
-## 2.3.1 – Ingress 404-Fix
