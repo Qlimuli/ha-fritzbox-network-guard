@@ -16,7 +16,7 @@ def norm_mac(mac: str) -> str:
 
 
 class MacQuarantine:
-    """Enable MAC filter only while devices are blocked; whitelist all known except blocked."""
+    """WAN isolation only – never enable WLAN MAC filter (prevents operator lockout)."""
 
     def __init__(
         self,
@@ -92,7 +92,7 @@ class MacQuarantine:
                 except Exception as exc:
                     log.debug("MAC filter skip %s: %s", svc, exc)
         except Exception as exc:
-            log.error("set_filter_enabled failed: %s", exp := exc)
+            log.error("set_filter_enabled failed: %s", exp := exp if False else exc)
         return ok
 
     def remove_mac(self, mac: str) -> bool:
@@ -131,24 +131,15 @@ class MacQuarantine:
                 "mac5": parts[5],
                 "btn_delete": "",
             },
-            {
-                "xhr": "1",
-                "sid": sid,
-                "lang": "de",
-                "page": "netDev",
-                "xhrId": "cleanup",
-                "delete": mac,
-                "useajax": "1",
-            },
         ]
         for data in attempts:
             try:
                 r = requests.post(f"{base}/data.lua", data=data, timeout=10)
                 if r.status_code == 200:
-                    log.info("Web remove MAC OK for %s (page=%s)", mac, data.get("page"))
+                    log.info("Web remove MAC OK for %s", mac)
                     return True
             except Exception as exc:
-                log.debug("remove MAC %s: %s", mac, exp := exc)
+                log.debug("remove MAC %s: %s", mac, exp := exp if False else exc)
         log.warning("Could not remove MAC %s from known list", mac)
         return False
 
@@ -185,46 +176,33 @@ class MacQuarantine:
         return False
 
     def apply(self, blocked_devices: dict, known_devices: dict) -> dict:
-        """If blocked: enable MAC filter, allow all known except blocked. If empty: disable."""
+        """SAFETY: Never enable MAC filter automatically.
+
+        Enabling WLAN MAC filtering can lock the operator out of the Fritz GUI
+        (especially with private/random MAC addresses on phones). We only use
+        WAN isolation (DisallowWANAccessByIP). This method always tries to
+        keep the MAC filter OFF.
+        """
         result: dict[str, Any] = {
             "filter_enabled": False,
             "removed": [],
             "allowed": [],
             "errors": [],
         }
-        blocked_macs = {norm_mac(v.get("mac")) for v in blocked_devices.values() if v.get("mac")}
-        blocked_macs.discard("")
-
-        if not blocked_devices:
-            if self.set_filter_enabled(False):
-                result["filter_enabled"] = False
-                self.scan_stats["mac_filter_active"] = False
-                log.info("MAC filter DISABLED (no blocked devices)")
-            else:
-                result["errors"].append("disable_filter_failed")
-            return result
-
-        if not self.set_filter_enabled(True):
-            result["errors"].append("enable_filter_failed")
+        # Always force MAC filter OFF – never enable it from this add-on
+        if self.set_filter_enabled(False):
+            result["filter_enabled"] = False
+            self.scan_stats["mac_filter_active"] = False
+            log.info("MAC filter kept/forced OFF (WAN-only isolation; no WLAN MAC quarantine)")
         else:
-            result["filter_enabled"] = True
-            self.scan_stats["mac_filter_active"] = True
-            log.info("MAC filter ENABLED (%d blocked)", len(blocked_devices))
-
-        allowed_macs = set()
-        for d in known_devices.values():
-            m = norm_mac(d.get("mac") or "")
-            if m and m not in blocked_macs:
-                allowed_macs.add(m)
-
-        for m in blocked_macs:
-            if self.remove_mac(m):
-                result["removed"].append(m)
-            else:
-                result["errors"].append(f"remove_failed:{m}")
-
-        for m in allowed_macs:
-            if self.ensure_mac_allowed(m):
-                result["allowed"].append(m)
-
+            result["errors"].append("disable_filter_failed")
+            log.warning("Could not disable MAC filter – operator may need cable access to fritz.box")
         return result
+
+    def force_disable(self) -> bool:
+        """Emergency: force MAC filter off on all WLAN interfaces."""
+        ok = self.set_filter_enabled(False)
+        if ok:
+            self.scan_stats["mac_filter_active"] = False
+            log.info("MAC filter FORCE DISABLED")
+        return ok
